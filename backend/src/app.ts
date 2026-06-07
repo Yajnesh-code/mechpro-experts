@@ -23,6 +23,14 @@ app.use(sanitizeRequest);
 app.use(morgan(env.nodeEnv === "production" ? "combined" : "dev"));
 app.use(`/${env.uploadDir}`, express.static(path.resolve(process.cwd(), env.uploadDir)));
 
+app.get("/", (_req, res) => {
+  res.json({ status: "ok", service: "MechPro Experts API" });
+});
+
+app.get("/health", (_req, res) => {
+  res.json({ status: "healthy" });
+});
+
 app.use(routes);
 app.use((_req, res) => res.status(404).json({ message: "Route not found" }));
 app.use(errorMiddleware);
