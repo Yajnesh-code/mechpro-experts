@@ -27,7 +27,7 @@ export function GradientButton({
 }: GradientButtonProps) {
   return (
     <button
-      className={`relative h-[54px] overflow-hidden rounded-[16px] px-5 text-base font-bold transition hover:-translate-y-[1px] disabled:cursor-not-allowed disabled:opacity-70 ${fullWidth ? "w-full" : ""} ${buttonClassName(variant)} ${className}`}
+      className={`relative h-[50px] overflow-hidden rounded-[15px] px-4 text-[15px] font-bold transition hover:-translate-y-[1px] disabled:cursor-not-allowed disabled:opacity-70 sm:h-[54px] sm:rounded-[16px] sm:px-5 sm:text-base ${fullWidth ? "w-full" : ""} ${buttonClassName(variant)} ${className}`}
       {...props}
     >
       <span className="relative z-10">{children}</span>

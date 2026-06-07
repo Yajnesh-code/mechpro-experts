@@ -44,7 +44,7 @@ export default function ForgotPasswordPage() {
       title="Forgot Password?"
       subtitle="Enter your registered email address and we'll send a reset link to secure your account."
     >
-      <form onSubmit={onSubmit} className="space-y-6">
+      <form onSubmit={onSubmit} className="space-y-4 sm:space-y-6">
         <InputField<FormValues>
           name="email"
           label="Email Address"
@@ -69,7 +69,7 @@ export default function ForgotPasswordPage() {
         </GradientButton>
         <Link
           href="/login"
-          className={`flex h-[54px] items-center justify-center rounded-[16px] px-5 text-center text-base font-bold transition ${buttonClassName("ghost")}`}
+          className={`flex h-[50px] items-center justify-center rounded-[15px] px-4 text-center text-[15px] font-bold transition sm:h-[54px] sm:rounded-[16px] sm:px-5 sm:text-base ${buttonClassName("ghost")}`}
         >
           Back to Login
         </Link>

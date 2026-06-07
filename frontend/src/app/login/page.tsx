@@ -85,7 +85,7 @@ export default function LoginPage() {
       subtitle="Access your role dashboard for claims, leads, approvals, and service tracking."
       heroRole={selectedRole}
     >
-      <form onSubmit={onSubmit} className="space-y-5">
+      <form onSubmit={onSubmit} className="space-y-4 sm:space-y-5">
         <InputField<LoginFormValues>
           name="identifier"
           label="Email or Mobile Number"
@@ -103,12 +103,12 @@ export default function LoginPage() {
           error={errors.password}
         />
 
-        <div className="flex items-center justify-between text-sm font-semibold text-[#4f5a8d]">
+        <div className="flex items-center justify-between gap-3 text-xs font-semibold text-[#4f5a8d] sm:text-sm">
           <label className="inline-flex items-center gap-2">
-            <input type="checkbox" className="h-5 w-5 accent-violet-600" {...register("rememberMe")} />
+            <input type="checkbox" className="h-4 w-4 accent-violet-600 sm:h-5 sm:w-5" {...register("rememberMe")} />
             Remember me
           </label>
-          <Link href="/forgot-password" className="text-base font-bold text-violet-600 hover:text-fuchsia-500">
+          <Link href="/forgot-password" className="text-xs font-bold text-violet-600 hover:text-fuchsia-500 sm:text-base">
             Forgot Password?
           </Link>
         </div>
@@ -125,18 +125,18 @@ export default function LoginPage() {
           {isSubmitting ? "Logging in..." : "Login"}
         </GradientButton>
 
-        <button type="button" className={`h-[54px] w-full rounded-[16px] px-5 text-base font-bold transition ${buttonClassName("ghost")}`}>
+        <button type="button" className={`h-[50px] w-full rounded-[15px] px-4 text-[15px] font-bold transition sm:h-[54px] sm:rounded-[16px] sm:px-5 sm:text-base ${buttonClassName("ghost")}`}>
           Continue with Google
         </button>
 
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-          <Link href="/register/sales-partner" className={`flex h-[54px] items-center justify-center rounded-[16px] px-4 text-center text-base font-bold transition ${buttonClassName("secondary")}`}>
+          <Link href="/register/sales-partner" className={`flex h-[48px] items-center justify-center rounded-[15px] px-3 text-center text-[14px] font-bold transition sm:h-[54px] sm:rounded-[16px] sm:px-4 sm:text-base ${buttonClassName("secondary")}`}>
             Sales Register
           </Link>
-          <Link href="/register/service-partner" className={`flex h-[54px] items-center justify-center rounded-[16px] px-4 text-center text-base font-bold transition ${buttonClassName("ghost")}`}>
+          <Link href="/register/service-partner" className={`flex h-[48px] items-center justify-center rounded-[15px] px-3 text-center text-[14px] font-bold transition sm:h-[54px] sm:rounded-[16px] sm:px-4 sm:text-base ${buttonClassName("ghost")}`}>
             Service Register
           </Link>
-          <Link href="/register/customer" className={`flex h-[54px] items-center justify-center rounded-[16px] px-4 text-center text-base font-bold transition ${buttonClassName("ghost")}`}>
+          <Link href="/register/customer" className={`flex h-[48px] items-center justify-center rounded-[15px] px-3 text-center text-[14px] font-bold transition sm:h-[54px] sm:rounded-[16px] sm:px-4 sm:text-base ${buttonClassName("ghost")}`}>
             Customer Register
           </Link>
         </motion.div>

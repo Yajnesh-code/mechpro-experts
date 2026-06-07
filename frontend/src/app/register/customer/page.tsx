@@ -74,15 +74,15 @@ export default function CustomerRegisterPage() {
 
   return (
     <AuthLayout title="Customer Registration" subtitle="Create your account to track service status, payments, and assigned partner updates." heroRole="customer">
-      <form onSubmit={onSubmit} className="space-y-6">
-        <div className="grid gap-5 md:grid-cols-2">
+      <form onSubmit={onSubmit} className="space-y-4 sm:space-y-6">
+        <div className="grid gap-4 sm:gap-5 md:grid-cols-2">
           <InputField<FormValues> name="fullName" label="Full Name" placeholder="Enter full name" register={register} error={errors.fullName} icon={User} />
           <InputField<FormValues> name="mobileNumber" label="Mobile Number" placeholder="Enter mobile number" register={register} error={errors.mobileNumber} icon={Phone} />
           <InputField<FormValues> name="email" label="Email" placeholder="Enter email address" register={register} error={errors.email} icon={Mail} type="email" />
           <InputField<FormValues> name="vehicleNumber" label="Vehicle Number" placeholder="MH 04 AB 1234" register={register} error={errors.vehicleNumber} icon={Car} />
           <label className="block md:col-span-2">
-            <span className="mb-1.5 block text-[16px] font-extrabold text-[#11153d]">City</span>
-            <select {...register("city")} className="h-[54px] w-full rounded-[16px] border border-[#d8cef2] bg-white px-4 text-base font-semibold text-[#1a1e4f] outline-none focus:border-violet-400 focus:ring-4 focus:ring-violet-100/70">
+            <span className="mb-1.5 block text-[14px] font-extrabold text-[#11153d] sm:text-[16px]">City</span>
+            <select {...register("city")} className="h-[50px] w-full rounded-[15px] border border-[#d8cef2] bg-white px-3.5 text-[15px] font-semibold text-[#1a1e4f] outline-none focus:border-violet-400 focus:ring-4 focus:ring-violet-100/70 sm:h-[54px] sm:rounded-[16px] sm:px-4 sm:text-base">
               <option value="">Select city</option>
               {cityOptions.map((city) => (
                 <option key={city} value={city}>
@@ -92,7 +92,7 @@ export default function CustomerRegisterPage() {
             </select>
             {errors.city && <p className="mt-1 text-sm font-semibold text-red-500">{errors.city.message}</p>}
           </label>
-          <div className="md:col-span-2 grid gap-4 sm:grid-cols-2">
+          <div className="grid gap-4 md:col-span-2 sm:grid-cols-2">
             <PasswordField<FormValues> name="password" label="Password" placeholder="Create password" register={register} error={errors.password} />
             <PasswordField<FormValues> name="confirmPassword" label="Confirm Password" placeholder="Confirm password" register={register} error={errors.confirmPassword} />
           </div>
@@ -112,7 +112,7 @@ export default function CustomerRegisterPage() {
           {isSubmitting ? "Creating Account..." : "Register as Customer"}
         </GradientButton>
 
-        <Link href="/login" className={`flex h-[54px] items-center justify-center rounded-[16px] px-5 text-center text-base font-bold transition ${buttonClassName("ghost")}`}>
+        <Link href="/login" className={`flex h-[50px] items-center justify-center rounded-[15px] px-4 text-center text-[15px] font-bold transition sm:h-[54px] sm:rounded-[16px] sm:px-5 sm:text-base ${buttonClassName("ghost")}`}>
           Back to Login
         </Link>
       </form>

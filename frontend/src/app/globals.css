@@ -1909,6 +1909,106 @@ body {
 }
 
 @media (max-width: 600px) {
+  #nav {
+    height: 74px;
+    padding: 0 16px;
+    gap: 10px;
+  }
+
+  .nav-logo {
+    min-width: 0;
+    gap: 8px;
+  }
+
+  .logo-mark {
+    width: 62px;
+    height: 46px;
+    flex: 0 0 auto;
+  }
+
+  .logo-wordmark strong {
+    font-size: 12px;
+  }
+
+  .logo-wordmark span {
+    max-width: 118px;
+    font-size: 8.5px;
+    letter-spacing: 1.2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .logo-wordmark em {
+    font-size: 10px;
+    white-space: nowrap;
+  }
+
+  .nav-end {
+    flex: 0 0 auto;
+    gap: 7px;
+  }
+
+  .btn-nav-ghost,
+  .btn-nav-primary {
+    padding: 9px 12px;
+    border-radius: 10px;
+    font-size: 13px;
+    line-height: 1.15;
+  }
+
+  .hero {
+    min-height: auto;
+    padding: 124px 20px 56px;
+  }
+
+  .hero-eyebrow {
+    margin-bottom: 22px;
+    padding: 5px 12px 5px 7px;
+    font-size: 10.5px;
+    letter-spacing: 1.6px;
+  }
+
+  .hero h1 {
+    font-size: 42px;
+    line-height: 1.08;
+    letter-spacing: -2.2px;
+    margin-bottom: 24px;
+  }
+
+  .hero-sub {
+    font-size: 17px;
+    line-height: 1.75;
+    margin-bottom: 32px;
+  }
+
+  .hero-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 42px;
+  }
+
+  .btn-lg {
+    justify-content: center;
+    padding: 13px 14px;
+    font-size: 14px;
+    text-align: center;
+  }
+
+  .hero-stats {
+    gap: 20px;
+    justify-content: space-between;
+  }
+
+  .stat-val {
+    font-size: 24px;
+  }
+
+  .stat-lbl {
+    font-size: 12px;
+  }
+
   .serve-grid,
   .services-grid,
   .why-grid {

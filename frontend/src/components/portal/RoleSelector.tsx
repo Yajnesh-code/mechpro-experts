@@ -26,7 +26,7 @@ const items: { label: string; value: PortalRole }[] = [
 export function RoleSelector({ value, onChange }: RoleSelectorProps) {
   return (
     <div>
-      <p className="mb-2.5 text-[16px] font-extrabold text-[#11153d]">Select Role</p>
+      <p className="mb-2 text-[14px] font-extrabold text-[#11153d] sm:mb-2.5 sm:text-[16px]">Select Role</p>
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         {items.map((item) => {
           const Icon = roleIconMap[item.value];
@@ -39,9 +39,9 @@ export function RoleSelector({ value, onChange }: RoleSelectorProps) {
               onClick={() => onChange(item.value)}
               whileHover={{ y: -1 }}
               whileTap={{ scale: 0.98 }}
-              className={`min-h-[66px] rounded-[16px] border px-2.5 py-2.5 text-center text-[14px] font-bold transition ${active ? "border-violet-400 bg-violet-50 text-violet-700 shadow-[0_12px_26px_rgba(111,43,255,0.18)]" : "border-[#ddd4f5] bg-white text-[#4a4f73] hover:border-violet-300 hover:shadow-[0_10px_22px_rgba(111,43,255,0.12)]"}`}
+              className={`min-h-[58px] rounded-[15px] border px-2 py-2 text-center text-[12px] font-bold transition sm:min-h-[66px] sm:rounded-[16px] sm:px-2.5 sm:py-2.5 sm:text-[14px] ${active ? "border-violet-400 bg-violet-50 text-violet-700 shadow-[0_12px_26px_rgba(111,43,255,0.18)]" : "border-[#ddd4f5] bg-white text-[#4a4f73] hover:border-violet-300 hover:shadow-[0_10px_22px_rgba(111,43,255,0.12)]"}`}
             >
-              <Icon className="mx-auto mb-1 h-4 w-4" />
+              <Icon className="mx-auto mb-1 h-3.5 w-3.5 sm:h-4 sm:w-4" />
               {item.label}
             </motion.button>
           );

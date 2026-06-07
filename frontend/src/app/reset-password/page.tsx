@@ -85,7 +85,7 @@ export default function ResetPasswordPage() {
 
   return (
     <AuthLayout title="Reset Password" subtitle="Set a new password for your account and secure your MechPro Experts access.">
-      <form onSubmit={onSubmit} className="space-y-6">
+      <form onSubmit={onSubmit} className="space-y-4 sm:space-y-6">
         <InputField<FormValues>
           name="token"
           label="Reset Token"
@@ -98,7 +98,7 @@ export default function ResetPasswordPage() {
         <PasswordField<FormValues> name="newPassword" label="New Password" placeholder="Enter new password" register={register} error={errors.newPassword} />
 
         <div>
-          <div className="mb-1 flex items-center justify-between text-sm font-bold text-[#556094]">
+          <div className="mb-1 flex items-center justify-between text-xs font-bold text-[#556094] sm:text-sm">
             <span>Password strength</span>
             <span>{strength.label}</span>
           </div>
@@ -109,7 +109,7 @@ export default function ResetPasswordPage() {
 
         <PasswordField<FormValues> name="confirmPassword" label="Confirm New Password" placeholder="Confirm password" register={register} error={errors.confirmPassword} />
 
-        <div className="rounded-[18px] border border-[#e6def8] bg-[#f8f5ff] p-4 text-base font-semibold text-[#445083]">
+        <div className="rounded-[16px] border border-[#e6def8] bg-[#f8f5ff] p-3 text-sm font-semibold leading-6 text-[#445083] sm:rounded-[18px] sm:p-4 sm:text-base">
           Password must contain at least 8 characters, one uppercase letter, one number, and one special character.
         </div>
 
@@ -128,9 +128,9 @@ export default function ResetPasswordPage() {
           {isSubmitting ? "Resetting..." : "Reset Password"}
         </GradientButton>
 
-        <p className="text-center text-base font-semibold text-[#4f5a8d]">
+        <p className="text-center text-sm font-semibold text-[#4f5a8d] sm:text-base">
           Remember your password?{" "}
-          <Link href="/login" className="text-base font-black text-violet-600 hover:text-fuchsia-500">
+          <Link href="/login" className="text-sm font-black text-violet-600 hover:text-fuchsia-500 sm:text-base">
             Login here
           </Link>
         </p>

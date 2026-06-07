@@ -11,6 +11,14 @@ type TopbarProps = {
   roleLabel: string;
 };
 
+const portalEyebrow = (label: string) => {
+  if (label.toLowerCase().includes("admin")) return "Operations Portal";
+  if (label.toLowerCase().includes("sales")) return "Partner Portal";
+  if (label.toLowerCase().includes("service")) return "Service Portal";
+  if (label.toLowerCase().includes("customer")) return "Customer Portal";
+  return "MechPro Portal";
+};
+
 export function Topbar({ roleLabel }: TopbarProps) {
   const router = useRouter();
   const { logout } = useAuth();
@@ -31,8 +39,8 @@ export function Topbar({ roleLabel }: TopbarProps) {
   return (
     <header className="flex flex-wrap items-center gap-3 border-b border-[#ece5fb] bg-white px-4 py-3 sm:px-6">
       <div>
-        <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#7e88b5]">Dummy Dashboard</p>
-        <p className="text-xl font-black text-[#0f144a]">{roleLabel}</p>
+        <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#7e88b5] sm:text-xs">{portalEyebrow(roleLabel)}</p>
+        <p className="text-lg font-black leading-tight text-[#0f144a] sm:text-xl">{roleLabel}</p>
       </div>
       <div className="ml-auto flex items-center gap-2">
         <div className="hidden items-center gap-2 rounded-xl border border-[#ded5f6] bg-[#faf8ff] px-3 py-2 sm:flex">
@@ -45,7 +53,7 @@ export function Topbar({ roleLabel }: TopbarProps) {
             {notifications.some((item) => !item.readAt) && <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-pink-500" />}
           </button>
           {open && (
-            <div className="absolute right-0 top-12 z-50 w-80 rounded-2xl border border-[#e5def8] bg-white p-3 shadow-[0_24px_60px_rgba(15,20,74,0.18)]">
+            <div className="absolute right-0 top-12 z-50 w-[min(20rem,calc(100vw-2rem))] rounded-2xl border border-[#e5def8] bg-white p-3 shadow-[0_24px_60px_rgba(15,20,74,0.18)]">
               <div className="flex items-center justify-between">
                 <p className="font-black text-[#0f144a]">Notifications</p>
                 <button className="text-xs font-black text-violet-700" onClick={() => notificationsApi.list().then(setNotifications)}>Refresh</button>

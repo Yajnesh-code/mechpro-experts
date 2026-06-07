@@ -43,26 +43,40 @@ export function LeadsTable({ role }: { role: "admin" | "sales" | "service" }) {
   }, [leads, role, search]);
 
   return (
-    <section className="rounded-[24px] border border-[#e3daf7] bg-white p-5 shadow-[0_18px_50px_rgba(111,43,255,0.08)]">
+    <section className="rounded-[22px] border border-[#e3daf7] bg-white p-4 shadow-[0_18px_50px_rgba(111,43,255,0.08)] sm:rounded-[24px] sm:p-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-xl font-black text-[#0f144a]">{role === "service" ? "Assigned Jobs" : role === "admin" ? "Lead / Case Management" : "Lead Management"}</h2>
-          <p className="text-sm font-semibold text-[#6370a4]">{role === "admin" ? "Internal lead/case operations connected to backend" : "Backend connected sales lead operations"}</p>
+          <h2 className="text-lg font-black text-[#0f144a] sm:text-xl">{role === "service" ? "Assigned Jobs" : role === "admin" ? "Lead / Case Management" : "Lead Management"}</h2>
+          <p className="mt-1 text-xs font-semibold text-[#6370a4] sm:text-sm">{role === "admin" ? "Live lead and service request operations" : "Live backend-connected operations"}</p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <label className="flex items-center gap-2 rounded-xl border border-[#ded4f6] bg-[#faf8ff] px-3 py-2 text-sm font-bold text-[#42508a]">
+        <div className="flex w-full flex-wrap gap-2 sm:w-auto">
+          <label className="flex min-w-0 flex-1 items-center gap-2 rounded-xl border border-[#ded4f6] bg-[#faf8ff] px-3 py-2 text-sm font-bold text-[#42508a] sm:flex-none">
             <Search className="h-4 w-4 text-violet-600" />
-            <input className="bg-transparent outline-none placeholder:text-[#8d97c1]" placeholder={role === "admin" ? "Search leads/cases..." : "Search leads..."} value={search} onChange={(event) => setSearch(event.target.value)} />
+            <input className="min-w-0 bg-transparent outline-none placeholder:text-[#8d97c1]" placeholder={role === "admin" ? "Search leads/cases..." : "Search leads..."} value={search} onChange={(event) => setSearch(event.target.value)} />
           </label>
           {role !== "service" && (
-            <Link href={`${basePath}/new`} className="inline-flex items-center gap-2 rounded-xl bg-mechpro-gradient px-4 py-2 text-sm font-black text-white shadow-[0_14px_28px_rgba(111,43,255,0.25)]">
+            <Link href={`${basePath}/new`} className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-mechpro-gradient px-4 py-2 text-sm font-black text-white shadow-[0_14px_28px_rgba(111,43,255,0.25)] sm:w-auto">
               <Plus className="h-4 w-4" /> Create Lead / Case
             </Link>
           )}
         </div>
       </div>
 
-      <div className="mt-5 overflow-x-auto">
+      <div className="mt-4 space-y-3 md:hidden">
+        {loading && Array.from({ length: 3 }).map((_, index) => (
+          <div key={index} className="h-36 animate-pulse rounded-[18px] bg-[#f3eefc]" />
+        ))}
+        {error && (
+          <div className="rounded-[18px] border border-red-100 bg-red-50 p-4 text-center">
+            <p className="font-bold text-red-600">{error}</p>
+            <button className="mt-3 rounded-xl border border-red-100 bg-white px-4 py-2 text-sm font-bold text-red-700" onClick={refetch}>Retry</button>
+          </div>
+        )}
+        {!loading && !error && rows.length === 0 && <div className="rounded-[18px] bg-[#faf8ff] p-5 text-center text-sm font-bold text-[#6370a4]">No leads found.</div>}
+        {!loading && !error && rows.map((lead) => <LeadMobileCard key={lead.id} lead={lead} href={`${basePath}/${lead.id}`} />)}
+      </div>
+
+      <div className="mt-5 hidden overflow-x-auto md:block">
         <table className="min-w-full text-left">
           <thead>
             <tr className="bg-[#f7f3ff] text-xs font-black uppercase tracking-[0.08em] text-[#7e88b5]">
@@ -96,6 +110,37 @@ function LeadRow({ lead, href }: { lead: UiLead; href: string }) {
   );
 }
 
+function LeadMobileCard({ lead, href }: { lead: UiLead; href: string }) {
+  return (
+    <Link href={href} className="block rounded-[18px] border border-[#ece5fb] bg-[#fbf9ff] p-4 shadow-[0_12px_28px_rgba(111,43,255,0.07)]">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-base font-black text-violet-700">{lead.leadId}</p>
+          <p className="mt-1 text-sm font-black text-[#19204f]">{lead.customer.name}</p>
+          <p className="text-xs font-semibold text-[#6f7aa9]">{lead.customer.mobile}</p>
+        </div>
+        <StatusPill status={lead.status} />
+      </div>
+      <div className="mt-4 grid grid-cols-2 gap-3 text-xs">
+        <div>
+          <p className="font-black uppercase tracking-[0.12em] text-[#8a94bd]">Vehicle</p>
+          <p className="mt-1 font-bold text-[#19204f]">{lead.vehicle.brand} {lead.vehicle.model}</p>
+          <p className="font-mono text-[#6f7aa9]">{lead.vehicle.number}</p>
+        </div>
+        <div>
+          <p className="font-black uppercase tracking-[0.12em] text-[#8a94bd]">Partner</p>
+          <p className="mt-1 font-bold text-[#19204f]">{lead.assignedServicePartner?.name ?? lead.salesPartner.name}</p>
+          <p className="text-[#6f7aa9]">{lead.assignedServicePartner?.type ?? lead.salesPartner.typeName}</p>
+        </div>
+      </div>
+      <div className="mt-4 flex items-center justify-between border-t border-[#eee8fb] pt-3">
+        <PriorityPill priority={lead.priority} />
+        <span className="text-xs font-bold text-[#6370a4]">{formatShortDate(lead.createdAt)}</span>
+      </div>
+    </Link>
+  );
+}
+
 export function LeadStats({ leads }: { leads: UiLead[] }) {
   const revenue = leads.reduce((sum, lead) => sum + (lead.bill?.total || 0), 0);
   const cards = [
@@ -104,6 +149,6 @@ export function LeadStats({ leads }: { leads: UiLead[] }) {
     ["Completed", leads.filter((lead) => lead.status === "Vehicle Delivered").length],
     ["Revenue", revenue ? formatMoney(revenue) : "INR 0"],
   ];
-  return <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">{cards.map(([title, value]) => <div key={title} className="rounded-[22px] border border-[#e3daf7] bg-white p-5 shadow-[0_14px_34px_rgba(111,43,255,0.08)]"><p className="text-xs font-black uppercase tracking-[0.12em] text-[#7e88b5]">{title}</p><p className="mt-2 text-3xl font-black text-[#0f144a]">{value}</p></div>)}</div>;
+  return <div className="grid gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-4">{cards.map(([title, value]) => <div key={title} className="rounded-[20px] border border-[#e3daf7] bg-white p-4 shadow-[0_14px_34px_rgba(111,43,255,0.08)] sm:rounded-[22px] sm:p-5"><p className="text-[11px] font-black uppercase tracking-[0.12em] text-[#7e88b5] sm:text-xs">{title}</p><p className="mt-2 text-2xl font-black text-[#0f144a] sm:text-3xl">{value}</p></div>)}</div>;
 }
 
