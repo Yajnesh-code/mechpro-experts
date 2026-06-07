@@ -21,4 +21,4 @@ COPY --from=build /app/dist ./dist
 COPY --from=build /app/prisma ./prisma
 RUN mkdir -p uploads
 EXPOSE 8000
-CMD ["sh", "-c", "npx prisma migrate deploy && node dist/server.js"]
+CMD ["sh", "-c", "npx prisma migrate deploy && node dist/src/server.js"]
