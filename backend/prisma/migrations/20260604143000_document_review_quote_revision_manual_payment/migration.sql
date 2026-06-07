@@ -1,0 +1,16 @@
+ALTER TYPE "QuoteStatus" ADD VALUE IF NOT EXISTS 'REVISION_REQUESTED';
+
+ALTER TABLE "Document"
+  ADD COLUMN IF NOT EXISTS "reviewStatus" TEXT NOT NULL DEFAULT 'PENDING_REVIEW',
+  ADD COLUMN IF NOT EXISTS "reviewNotes" TEXT,
+  ADD COLUMN IF NOT EXISTS "reviewedById" TEXT,
+  ADD COLUMN IF NOT EXISTS "reviewedAt" TIMESTAMP(3);
+
+ALTER TABLE "Invoice"
+  ADD COLUMN IF NOT EXISTS "paymentMode" TEXT,
+  ADD COLUMN IF NOT EXISTS "paymentReference" TEXT,
+  ADD COLUMN IF NOT EXISTS "paymentNotes" TEXT,
+  ADD COLUMN IF NOT EXISTS "paymentUpdatedById" TEXT;
+
+CREATE INDEX IF NOT EXISTS "Document_reviewStatus_idx" ON "Document"("reviewStatus");
+CREATE INDEX IF NOT EXISTS "Invoice_paymentMode_idx" ON "Invoice"("paymentMode");

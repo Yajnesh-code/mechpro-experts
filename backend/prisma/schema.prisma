@@ -1,0 +1,282 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN
+  SALES_PARTNER
+  SERVICE_PARTNER
+  CUSTOMER
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  PENDING
+  SUSPENDED
+}
+
+enum SalesPartnerType {
+  BR
+  CR
+  FT
+  AG
+  IN
+  IS
+  GT
+}
+
+enum ServicePartnerType {
+  WORKSHOP
+  PART_VENDOR
+  TOWING_SERVICE
+  ALPHA_GO
+}
+
+enum LeadStatus {
+  LEAD_CREATED
+  ASSIGNED
+  CAR_RECEIVED
+  INSPECTION_STARTED
+  INSPECTION_COMPLETED
+  QUOTE_SHARED
+  QUOTE_APPROVED
+  WORK_STARTED
+  WORK_COMPLETED
+  BILL_GENERATED
+  PAYMENT_DONE
+  VEHICLE_DELIVERED
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum FuelType {
+  PETROL
+  DIESEL
+  CNG
+  ELECTRIC
+  HYBRID
+}
+
+enum DocumentType {
+  RC_DOCUMENT
+  VEHICLE_PHOTO
+  INSURANCE_DOCUMENT
+  QUOTE_DOCUMENT
+  INVOICE_DOCUMENT
+  SERVICE_DOCUMENT
+  OTHER
+}
+
+enum QuoteStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  REVISION_REQUESTED
+}
+
+enum InvoiceStatus {
+  UNPAID
+  PAID
+  CANCELLED
+}
+
+model User {
+  id                  String              @id @default(cuid())
+  name                String
+  email               String              @unique
+  mobile              String?             @unique
+  passwordHash        String
+  role                UserRole
+  status              UserStatus          @default(ACTIVE)
+  companyName         String?
+  city                String?
+  address             String?
+  salesPartnerType    SalesPartnerType?
+  vendorCode          String?             @unique
+  servicePartnerType  ServicePartnerType?
+  serviceCategories   String[]            @default([])
+  gstOrLicense        String?
+  refreshTokenHash    String?
+  createdLeads        Lead[]              @relation("LeadSalesPartner")
+  assignedLeads       Lead[]              @relation("LeadServicePartner")
+  timelineEvents      LeadTimeline[]
+  documents           Document[]
+  quotations          Quotation[]
+  invoices            Invoice[]
+  notifications       Notification[]
+  auditLogs           AuditLog[]
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+
+  @@index([role])
+  @@index([status])
+  @@index([salesPartnerType])
+  @@index([servicePartnerType])
+}
+
+model Lead {
+  id                       String          @id @default(cuid())
+  leadCode                 String          @unique
+  customerName             String
+  customerEmail            String?
+  customerMobile           String
+  customerAddress          String?
+  vehicleNumber            String
+  vehicleBrand             String
+  vehicleModel             String
+  fuelType                 FuelType?
+  vehicleYear              Int?
+  vehicleColor             String?
+  insuranceCompany         String?
+  serviceType              String
+  services                 String[]        @default([])
+  priority                 Priority        @default(MEDIUM)
+  status                   LeadStatus      @default(LEAD_CREATED)
+  location                 String
+  notes                    String?
+  salesPartnerId           String
+  assignedServicePartnerId String?
+  estimatedCompletion      DateTime?
+  salesPartner             User            @relation("LeadSalesPartner", fields: [salesPartnerId], references: [id])
+  assignedServicePartner   User?           @relation("LeadServicePartner", fields: [assignedServicePartnerId], references: [id])
+  timeline                 LeadTimeline[]
+  documents                Document[]
+  quotations               Quotation[]
+  invoices                 Invoice[]
+  createdAt                DateTime        @default(now())
+  updatedAt                DateTime        @updatedAt
+
+  @@index([leadCode])
+  @@index([status])
+  @@index([salesPartnerId])
+  @@index([assignedServicePartnerId])
+  @@index([customerMobile])
+}
+
+model LeadTimeline {
+  id            String     @id @default(cuid())
+  leadId        String
+  status        LeadStatus
+  title         String
+  notes         String?
+  performedById String?
+  performedBy   User?      @relation(fields: [performedById], references: [id])
+  lead          Lead       @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  createdAt     DateTime   @default(now())
+
+  @@index([leadId])
+  @@index([status])
+}
+
+model Document {
+  id           String       @id @default(cuid())
+  leadId       String
+  uploadedById String
+  replacesDocumentId String?
+  type         DocumentType
+  name         String
+  path         String
+  mimeType     String
+  size         Int
+  version      Int          @default(1)
+  isCurrent    Boolean      @default(true)
+  reviewStatus String       @default("PENDING_REVIEW")
+  reviewNotes  String?
+  reviewedById String?
+  reviewedAt   DateTime?
+  lead         Lead         @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  uploadedBy   User         @relation(fields: [uploadedById], references: [id])
+  createdAt    DateTime     @default(now())
+
+  @@index([leadId])
+  @@index([type])
+  @@index([reviewStatus])
+  @@index([replacesDocumentId])
+  @@index([isCurrent])
+}
+
+model Quotation {
+  id          String      @id @default(cuid())
+  leadId      String
+  createdById String
+  amount      Decimal     @db.Decimal(12, 2)
+  items       Json
+  status      QuoteStatus @default(PENDING)
+  approvedAt  DateTime?
+  documentId  String?
+  lead        Lead        @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  createdBy   User        @relation(fields: [createdById], references: [id])
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@index([leadId])
+  @@index([status])
+}
+
+model Invoice {
+  id          String        @id @default(cuid())
+  leadId      String
+  createdById String
+  amount      Decimal       @db.Decimal(12, 2)
+  gst         Decimal       @db.Decimal(12, 2)
+  total       Decimal       @db.Decimal(12, 2)
+  items       Json
+  status      InvoiceStatus @default(UNPAID)
+  paidAt      DateTime?
+  paymentMode String?
+  paymentReference String?
+  paymentNotes String?
+  paymentUpdatedById String?
+  documentId  String?
+  lead        Lead          @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  createdBy   User          @relation(fields: [createdById], references: [id])
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@index([leadId])
+  @@index([status])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  message   String
+  readAt    DateTime?
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([readAt])
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  actorId     String?
+  action      String
+  entityType  String
+  entityId    String?
+  metadata    Json?
+  actor       User?    @relation(fields: [actorId], references: [id])
+  createdAt   DateTime @default(now())
+
+  @@index([actorId])
+  @@index([entityType, entityId])
+}
+
+model SequenceCounter {
+  key       String   @id
+  value     Int      @default(0)
+  updatedAt DateTime @updatedAt
+}

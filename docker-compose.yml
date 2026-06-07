@@ -1,0 +1,73 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: mechpro-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: mechpro_experts
+      POSTGRES_USER: mechpro
+      POSTGRES_PASSWORD: mechpro_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mechpro -d mechpro_experts"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+    container_name: mechpro-backend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 8000
+      DATABASE_URL: postgresql://mechpro:mechpro_password@postgres:5432/mechpro_experts?schema=public
+      CORS_ORIGIN: http://localhost:3000,http://localhost:8080
+      PUBLIC_API_URL: http://localhost:8000
+      JWT_ACCESS_SECRET: local-docker-access-secret-change-me
+      JWT_REFRESH_SECRET: local-docker-refresh-secret-change-me
+      UPLOAD_DIR: uploads
+      STORAGE_PROVIDER: local
+    ports:
+      - "8000:8000"
+    volumes:
+      - backend_uploads:/app/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:8000
+    container_name: mechpro-frontend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      NEXT_PUBLIC_API_URL: http://localhost:8000
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: mechpro-nginx
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - frontend
+      - backend
+
+volumes:
+  postgres_data:
+  backend_uploads:
