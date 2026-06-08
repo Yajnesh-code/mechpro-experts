@@ -7,6 +7,7 @@ import { ArrowLeft, Camera, CheckCircle2, ExternalLink, FileText, IndianRupee, R
 import { useToast } from "@/context/ToastContext";
 import { useLead } from "@/hooks/useLead";
 import { useServicePartners } from "@/hooks/useServicePartners";
+import { compressImageFile } from "@/lib/fileCompression";
 import { ALL_STATUSES, adminApi, formatMoney, formatShortDate, operationsApi, type UiDocument, type UiLeadStatus } from "@/lib/operations";
 import { PriorityPill, StatusPill } from "./LeadTables";
 
@@ -114,7 +115,9 @@ export function LeadDetailView({ id, role }: { id: string; role: "admin" | "sale
     if (!lead || !file) return;
     setUploading(true);
     try {
-      await operationsApi.uploadDocument(lead.id, file, uploadType.split("|")[0] || "SERVICE_DOCUMENT");
+      const preparedFile = await compressImageFile(file);
+      if (!preparedFile) return;
+      await operationsApi.uploadDocument(lead.id, preparedFile, uploadType.split("|")[0] || "SERVICE_DOCUMENT");
       toast("success", "Document uploaded successfully.");
       refetch();
     } catch (err) {
@@ -128,7 +131,9 @@ export function LeadDetailView({ id, role }: { id: string; role: "admin" | "sale
     if (!lead || !file) return;
     setReuploadingId(document.id);
     try {
-      await operationsApi.uploadDocument(lead.id, file, document.type, document.id);
+      const preparedFile = await compressImageFile(file);
+      if (!preparedFile) return;
+      await operationsApi.uploadDocument(lead.id, preparedFile, document.type, document.id);
       toast("success", "Replacement document uploaded for review.");
       refetch();
     } catch (err) {

@@ -24,6 +24,7 @@ import {
   Wrench,
 } from "lucide-react";
 import { useToast } from "@/context/ToastContext";
+import { compressImageFile, compressImageFiles } from "@/lib/fileCompression";
 import { operationsApi, type UiPriority } from "@/lib/operations";
 
 type ServiceOption = {
@@ -354,17 +355,21 @@ function Textarea({ label, value, onChange }: { label: string; value: string; on
 }
 
 function FilePicker({ label, required, fileName, onChange }: { label: string; required?: boolean; fileName?: string; onChange: (file?: File) => void }) {
+  async function handleFile(file?: File) {
+    onChange(await compressImageFile(file));
+  }
+
   return (
     <div className="block rounded-2xl border border-dashed border-[#cdbdf4] bg-[#fbf9ff] p-4">
       <span className="text-sm font-black text-[#0f144a]">{label}{required ? <span className="text-pink-600"> *</span> : null}</span>
       <div className="mt-3 grid gap-2 sm:grid-cols-2">
         <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl bg-white px-4 py-3 text-sm font-bold text-violet-700">
           <Camera className="h-4 w-4" /> Take Photo
-          <input type="file" className="hidden" accept="image/*" capture="environment" onChange={(event) => onChange(event.target.files?.[0])} />
+          <input type="file" className="hidden" accept="image/*" capture="environment" onChange={(event) => handleFile(event.target.files?.[0])} />
         </label>
         <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl bg-white px-4 py-3 text-sm font-bold text-violet-700">
           <Upload className="h-4 w-4" /> Upload File
-          <input type="file" className="hidden" accept=".pdf,.jpg,.jpeg,.png" onChange={(event) => onChange(event.target.files?.[0])} />
+          <input type="file" className="hidden" accept=".pdf,.jpg,.jpeg,.png" onChange={(event) => handleFile(event.target.files?.[0])} />
         </label>
       </div>
       <p className="mt-2 truncate text-xs font-bold text-[#6370a4]">{fileName || "No file selected"}</p>
@@ -373,8 +378,9 @@ function FilePicker({ label, required, fileName, onChange }: { label: string; re
 }
 
 function MultiFilePicker({ label, required, files, accept, video, cameraLabel, onChange }: { label: string; required?: boolean; files: File[]; accept?: string; video?: boolean; cameraLabel?: string; onChange: (files: File[]) => void }) {
-  function append(nextFiles: File[]) {
-    onChange([...files, ...nextFiles]);
+  async function append(nextFiles: File[]) {
+    const preparedFiles = video ? nextFiles : await compressImageFiles(nextFiles);
+    onChange([...files, ...preparedFiles]);
   }
 
   return (
