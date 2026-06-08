@@ -22,12 +22,12 @@ const statusClass: Record<string, string> = {
 };
 
 export function StatusPill({ status }: { status: string }) {
-  return <span className={`rounded-full px-2.5 py-1 text-xs font-black ${statusClass[status] ?? "bg-slate-100 text-slate-700"}`}>{status}</span>;
+  return <span className={`whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-black sm:text-xs ${statusClass[status] ?? "bg-slate-100 text-slate-700"}`}>{status}</span>;
 }
 
 export function PriorityPill({ priority }: { priority: string }) {
   const styles: Record<string, string> = { Low: "bg-emerald-50 text-emerald-700", Medium: "bg-blue-50 text-blue-700", High: "bg-amber-50 text-amber-700", Urgent: "bg-red-50 text-red-700" };
-  return <span className={`rounded-full px-2.5 py-1 text-xs font-black ${styles[priority] ?? styles.Medium}`}>{priority}</span>;
+  return <span className={`whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-black sm:text-xs ${styles[priority] ?? styles.Medium}`}>{priority}</span>;
 }
 
 export function LeadsTable({ role }: { role: "admin" | "sales" | "service" }) {
@@ -43,13 +43,13 @@ export function LeadsTable({ role }: { role: "admin" | "sales" | "service" }) {
   }, [leads, role, search]);
 
   return (
-    <section className="rounded-[22px] border border-[#e3daf7] bg-white p-4 shadow-[0_18px_50px_rgba(111,43,255,0.08)] sm:rounded-[24px] sm:p-5">
+    <section className="w-full max-w-full overflow-hidden rounded-[22px] border border-[#e3daf7] bg-white p-4 shadow-[0_18px_50px_rgba(111,43,255,0.08)] sm:rounded-[24px] sm:p-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
+        <div className="min-w-0">
           <h2 className="text-lg font-black text-[#0f144a] sm:text-xl">{role === "service" ? "Assigned Jobs" : role === "admin" ? "Lead / Case Management" : "Lead Management"}</h2>
           <p className="mt-1 text-xs font-semibold text-[#6370a4] sm:text-sm">{role === "admin" ? "Live lead and service request operations" : "Live backend-connected operations"}</p>
         </div>
-        <div className="flex w-full flex-wrap gap-2 sm:w-auto">
+        <div className="flex w-full min-w-0 flex-wrap gap-2 sm:w-auto">
           <label className="flex min-w-0 flex-1 items-center gap-2 rounded-xl border border-[#ded4f6] bg-[#faf8ff] px-3 py-2 text-sm font-bold text-[#42508a] sm:flex-none">
             <Search className="h-4 w-4 text-violet-600" />
             <input className="min-w-0 bg-transparent outline-none placeholder:text-[#8d97c1]" placeholder={role === "admin" ? "Search leads/cases..." : "Search leads..."} value={search} onChange={(event) => setSearch(event.target.value)} />
@@ -112,30 +112,32 @@ function LeadRow({ lead, href }: { lead: UiLead; href: string }) {
 
 function LeadMobileCard({ lead, href }: { lead: UiLead; href: string }) {
   return (
-    <Link href={href} className="block rounded-[18px] border border-[#ece5fb] bg-[#fbf9ff] p-4 shadow-[0_12px_28px_rgba(111,43,255,0.07)]">
+    <Link href={href} className="block w-full max-w-full overflow-hidden rounded-[20px] border border-[#e7def8] bg-white p-4 shadow-[0_14px_34px_rgba(111,43,255,0.08)]">
       <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-base font-black text-violet-700">{lead.leadId}</p>
-          <p className="mt-1 text-sm font-black text-[#19204f]">{lead.customer.name}</p>
-          <p className="text-xs font-semibold text-[#6f7aa9]">{lead.customer.mobile}</p>
+        <div className="min-w-0">
+          <p className="truncate text-base font-black text-violet-700">{lead.leadId}</p>
+          <p className="mt-1 truncate text-sm font-black text-[#19204f]">{lead.customer.name}</p>
+          <p className="truncate text-xs font-semibold text-[#6f7aa9]">{lead.customer.mobile}</p>
         </div>
-        <StatusPill status={lead.status} />
+        <div className="shrink-0">
+          <StatusPill status={lead.status} />
+        </div>
       </div>
-      <div className="mt-4 grid grid-cols-2 gap-3 text-xs">
-        <div>
+      <div className="mt-4 grid min-w-0 grid-cols-2 gap-3 text-xs">
+        <div className="min-w-0">
           <p className="font-black uppercase tracking-[0.12em] text-[#8a94bd]">Vehicle</p>
-          <p className="mt-1 font-bold text-[#19204f]">{lead.vehicle.brand} {lead.vehicle.model}</p>
-          <p className="font-mono text-[#6f7aa9]">{lead.vehicle.number}</p>
+          <p className="mt-1 truncate font-bold text-[#19204f]">{lead.vehicle.brand} {lead.vehicle.model}</p>
+          <p className="truncate font-mono text-[#6f7aa9]">{lead.vehicle.number}</p>
         </div>
-        <div>
+        <div className="min-w-0">
           <p className="font-black uppercase tracking-[0.12em] text-[#8a94bd]">Partner</p>
-          <p className="mt-1 font-bold text-[#19204f]">{lead.assignedServicePartner?.name ?? lead.salesPartner.name}</p>
-          <p className="text-[#6f7aa9]">{lead.assignedServicePartner?.type ?? lead.salesPartner.typeName}</p>
+          <p className="mt-1 truncate font-bold text-[#19204f]">{lead.assignedServicePartner?.name ?? lead.salesPartner.name}</p>
+          <p className="truncate text-[#6f7aa9]">{lead.assignedServicePartner?.type ?? lead.salesPartner.typeName}</p>
         </div>
       </div>
       <div className="mt-4 flex items-center justify-between border-t border-[#eee8fb] pt-3">
         <PriorityPill priority={lead.priority} />
-        <span className="text-xs font-bold text-[#6370a4]">{formatShortDate(lead.createdAt)}</span>
+        <span className="shrink-0 text-xs font-bold text-[#6370a4]">{formatShortDate(lead.createdAt)}</span>
       </div>
     </Link>
   );
@@ -149,6 +151,6 @@ export function LeadStats({ leads }: { leads: UiLead[] }) {
     ["Completed", leads.filter((lead) => lead.status === "Vehicle Delivered").length],
     ["Revenue", revenue ? formatMoney(revenue) : "INR 0"],
   ];
-  return <div className="grid gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-4">{cards.map(([title, value]) => <div key={title} className="rounded-[20px] border border-[#e3daf7] bg-white p-4 shadow-[0_14px_34px_rgba(111,43,255,0.08)] sm:rounded-[22px] sm:p-5"><p className="text-[11px] font-black uppercase tracking-[0.12em] text-[#7e88b5] sm:text-xs">{title}</p><p className="mt-2 text-2xl font-black text-[#0f144a] sm:text-3xl">{value}</p></div>)}</div>;
+  return <div className="grid w-full max-w-full grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">{cards.map(([title, value]) => <div key={title} className="min-w-0 rounded-[20px] border border-[#e3daf7] bg-white p-4 shadow-[0_14px_34px_rgba(111,43,255,0.08)] sm:rounded-[22px] sm:p-5"><p className="truncate text-[10px] font-black uppercase tracking-[0.12em] text-[#7e88b5] sm:text-xs">{title}</p><p className="mt-2 truncate text-2xl font-black text-[#0f144a] sm:text-3xl">{value}</p></div>)}</div>;
 }
 

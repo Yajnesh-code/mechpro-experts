@@ -35,13 +35,13 @@ export function DashboardLayout({ children, sidebarItems, activeItem, roleLabel 
   };
 
   return (
-    <main className="min-h-screen bg-[#f5f1ff]">
-      <div className="flex min-h-screen">
+    <main className="min-h-screen overflow-x-hidden bg-[#f5f1ff]">
+      <div className="flex min-h-screen w-full min-w-0 overflow-x-hidden">
         <Sidebar items={sidebarItems} active={activeItem} />
-        <div className="flex min-h-screen flex-1 flex-col">
+        <div className="flex min-h-screen min-w-0 flex-1 flex-col overflow-x-hidden">
           <Topbar roleLabel={roleLabel} />
-          <nav className="border-b border-[#ece5fb] bg-white px-3 py-2 lg:hidden">
-            <div className="flex gap-2 overflow-x-auto pb-1">
+          <nav className="w-full max-w-full overflow-hidden border-b border-[#ece5fb] bg-white px-3 py-2 lg:hidden">
+            <div className="flex max-w-full gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               {sidebarItems.map((item) => {
                 const isActive = item === activeItem;
                 return (
@@ -60,7 +60,7 @@ export function DashboardLayout({ children, sidebarItems, activeItem, roleLabel 
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.35 }}
-            className="flex-1 space-y-4 p-3 sm:space-y-5 sm:p-6"
+            className="w-full min-w-0 flex-1 space-y-4 overflow-x-hidden p-3 sm:space-y-5 sm:p-6"
           >
             {children}
           </motion.section>
