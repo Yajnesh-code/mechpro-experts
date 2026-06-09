@@ -11,7 +11,8 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
     "seed": "tsx prisma/seed.ts",
-    "demo:reset": "tsx prisma/demo-reset.ts"
+    "demo:reset": "tsx prisma/demo-reset.ts",
+    "demo:admin-only": "tsx prisma/admin-only-reset.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.9.0",
