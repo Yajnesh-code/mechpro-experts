@@ -10,6 +10,8 @@ export const uploadService = {
     type: DocumentType;
     replacesDocumentId?: string;
   }) {
+    const storedFile = await storageService.storeLeadFile(params.file, params.type);
+
     return prisma.$transaction(async (tx) => {
       const replaced = params.replacesDocumentId
         ? await tx.document.findFirst({
@@ -31,7 +33,7 @@ export const uploadService = {
           replacesDocumentId: replaced?.id,
           type: params.type,
           name: params.file.originalname,
-          path: storageService.publicPath(params.file.filename),
+          path: storedFile.path,
           mimeType: params.file.mimetype,
           size: params.file.size,
           version: replaced ? replaced.version + 1 : 1,
