@@ -67,13 +67,22 @@ export function RoleModulePage({ kind, title }: RoleModulePageProps) {
       )}
 
       {!loading && !error && kind === "settings" && (
-        <div className="mt-5 grid gap-4 md:grid-cols-2">
-          <Setting label="Account" value={session?.user.name || "MechPro User"} />
-          <Setting label="Role" value={session?.role || "-"} />
-          <Setting label="Email" value={session?.user.email || "-"} />
-          <Setting label="Company" value={session?.user.company || "-"} />
-          <Setting label="Lead Visibility" value="Restricted to your authorized role" />
-          <Setting label="Session" value="JWT protected" />
+        <div className="mt-5 space-y-5">
+          <div className="rounded-[22px] border border-violet-100 bg-[linear-gradient(135deg,#fbf8ff,#fff)] p-4">
+            <p className="text-xs font-black uppercase tracking-[0.16em] text-violet-600">Account & Workflow</p>
+            <h2 className="mt-2 text-xl font-black text-[#0f144a]">{session?.user.name || "MechPro User"}</h2>
+            <p className="mt-2 text-sm font-semibold leading-6 text-[#6370a4]">Your dashboard is scoped to your role. You only see records authorized for this account.</p>
+          </div>
+          <div className="grid gap-4 md:grid-cols-2">
+            <Setting label="Account" value={session?.user.name || "MechPro User"} />
+            <Setting label="Role" value={session?.role || "-"} />
+            <Setting label="Email" value={session?.user.email || "-"} />
+            <Setting label="Company" value={session?.user.company || "-"} />
+            <Setting label="Lead Visibility" value="Restricted to your authorized role" />
+            <Setting label="Session" value="JWT protected" />
+            <Setting label="Document Storage" value="Local demo storage active; Cloudinary/AWS S3 planned for production" />
+            <Setting label="Notifications" value="Assignment, quote, document, and status alerts are backend-connected" />
+          </div>
         </div>
       )}
     </section>

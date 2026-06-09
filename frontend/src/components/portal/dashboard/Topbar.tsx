@@ -25,10 +25,24 @@ export function Topbar({ roleLabel }: TopbarProps) {
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const [notifications, setNotifications] = useState<any[]>([]);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
-    notificationsApi.list().then(setNotifications).catch(() => undefined);
+    refreshNotifications(false);
   }, []);
+
+  async function refreshNotifications(showToast = true) {
+    setRefreshing(true);
+    try {
+      const nextNotifications = await notificationsApi.list();
+      setNotifications(nextNotifications);
+      if (showToast) toast("success", "Notifications refreshed.");
+    } catch (err) {
+      toast("error", err instanceof Error ? err.message : "Unable to refresh notifications.");
+    } finally {
+      setRefreshing(false);
+    }
+  }
 
   function handleLogout() {
     logout();
@@ -56,7 +70,9 @@ export function Topbar({ roleLabel }: TopbarProps) {
             <div className="absolute right-0 top-12 z-50 w-[min(20rem,calc(100vw-2rem))] rounded-2xl border border-[#e5def8] bg-white p-3 shadow-[0_24px_60px_rgba(15,20,74,0.18)]">
               <div className="flex items-center justify-between">
                 <p className="font-black text-[#0f144a]">Notifications</p>
-                <button className="text-xs font-black text-violet-700" onClick={() => notificationsApi.list().then(setNotifications)}>Refresh</button>
+                <button className="text-xs font-black text-violet-700 disabled:opacity-50" disabled={refreshing} onClick={() => refreshNotifications()}>
+                  {refreshing ? "Refreshing..." : "Refresh"}
+                </button>
               </div>
               <div className="mt-3 max-h-80 space-y-2 overflow-y-auto">
                 {notifications.length === 0 && <p className="rounded-xl bg-[#faf8ff] p-3 text-sm font-bold text-[#6370a4]">No notifications yet.</p>}

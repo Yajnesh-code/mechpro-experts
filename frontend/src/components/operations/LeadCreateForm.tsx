@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   AlertTriangle,
@@ -14,10 +14,12 @@ import {
   Image as ImageIcon,
   MapPin,
   MoreHorizontal,
+  RotateCcw,
   Paintbrush,
   Route,
   ShieldAlert,
   ShieldCheck,
+  Trash2,
   Truck,
   Upload,
   Video,
@@ -355,24 +357,45 @@ function Textarea({ label, value, onChange }: { label: string; value: string; on
 }
 
 function FilePicker({ label, required, fileName, onChange }: { label: string; required?: boolean; fileName?: string; onChange: (file?: File) => void }) {
+  const [preview, setPreview] = useState("");
+  const [selectedSize, setSelectedSize] = useState("");
+
   async function handleFile(file?: File) {
-    onChange(await compressImageFile(file));
+    const preparedFile = await compressImageFile(file);
+    if (preview) URL.revokeObjectURL(preview);
+    setPreview(preparedFile?.type.startsWith("image/") ? URL.createObjectURL(preparedFile) : "");
+    setSelectedSize(preparedFile ? `${Math.max(1, Math.round(preparedFile.size / 1024))} KB` : "");
+    onChange(preparedFile);
+  }
+
+  function clearFile() {
+    if (preview) URL.revokeObjectURL(preview);
+    setPreview("");
+    setSelectedSize("");
+    onChange(undefined);
   }
 
   return (
     <div className="block rounded-2xl border border-dashed border-[#cdbdf4] bg-[#fbf9ff] p-4">
-      <span className="text-sm font-black text-[#0f144a]">{label}{required ? <span className="text-pink-600"> *</span> : null}</span>
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-sm font-black text-[#0f144a]">{label}{required ? <span className="text-pink-600"> *</span> : null}</span>
+        {fileName && <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-1 text-[10px] font-black uppercase tracking-[0.08em] text-emerald-700">Selected</span>}
+      </div>
+      {preview && <img src={preview} alt={`${label} preview`} className="mt-3 h-28 w-full rounded-xl border border-[#eee8fb] object-cover" />}
       <div className="mt-3 grid gap-2 sm:grid-cols-2">
         <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl bg-white px-4 py-3 text-sm font-bold text-violet-700">
-          <Camera className="h-4 w-4" /> Take Photo
+          <Camera className="h-4 w-4" /> {fileName ? "Retake Photo" : "Take Photo"}
           <input type="file" className="hidden" accept="image/*" capture="environment" onChange={(event) => handleFile(event.target.files?.[0])} />
         </label>
         <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl bg-white px-4 py-3 text-sm font-bold text-violet-700">
-          <Upload className="h-4 w-4" /> Upload File
+          <Upload className="h-4 w-4" /> {fileName ? "Replace File" : "Upload File"}
           <input type="file" className="hidden" accept=".pdf,.jpg,.jpeg,.png" onChange={(event) => handleFile(event.target.files?.[0])} />
         </label>
       </div>
-      <p className="mt-2 truncate text-xs font-bold text-[#6370a4]">{fileName || "No file selected"}</p>
+      <div className="mt-2 flex items-center justify-between gap-3">
+        <p className="min-w-0 truncate text-xs font-bold text-[#6370a4]">{fileName ? `${fileName}${selectedSize ? ` · ${selectedSize}` : ""}` : "No file selected"}</p>
+        {fileName && <button type="button" onClick={clearFile} className="shrink-0 rounded-full bg-white p-1.5 text-red-500"><Trash2 className="h-3.5 w-3.5" /></button>}
+      </div>
     </div>
   );
 }
@@ -385,10 +408,20 @@ function MultiFilePicker({ label, required, files, accept, video, cameraLabel, o
 
   return (
     <div className="block rounded-2xl border border-dashed border-[#cdbdf4] bg-[#fbf9ff] p-4">
-      <span className="text-sm font-black text-[#0f144a]">{label}{required ? <span className="text-pink-600"> *</span> : null}</span>
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-sm font-black text-[#0f144a]">{label}{required ? <span className="text-pink-600"> *</span> : null}</span>
+        {files.length > 0 && <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-1 text-[10px] font-black uppercase tracking-[0.08em] text-emerald-700">{files.length} selected</span>}
+      </div>
+      {!video && files.some((file) => file.type.startsWith("image/")) && (
+        <div className="mt-3 grid grid-cols-3 gap-2">
+          {files.filter((file) => file.type.startsWith("image/")).slice(0, 3).map((file, index) => (
+            <ImagePreview key={`${file.name}-${index}`} file={file} />
+          ))}
+        </div>
+      )}
       <div className="mt-3 grid gap-2 sm:grid-cols-2">
         <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl bg-white px-4 py-3 text-sm font-bold text-violet-700">
-          {video ? <Video className="h-4 w-4" /> : <Camera className="h-4 w-4" />} {cameraLabel || (video ? "Record Video" : "Take Photo")}
+          {video ? <Video className="h-4 w-4" /> : <Camera className="h-4 w-4" />} {files.length ? <RotateCcw className="h-3.5 w-3.5" /> : null} {cameraLabel || (video ? "Record Video" : "Take Photo")}
           <input type="file" className="hidden" accept={video ? "video/*" : "image/*"} capture="environment" onChange={(event) => append(Array.from(event.target.files || []))} />
         </label>
         <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl bg-white px-4 py-3 text-sm font-bold text-violet-700">
@@ -400,10 +433,23 @@ function MultiFilePicker({ label, required, files, accept, video, cameraLabel, o
         {files.length === 0 && <span className="text-xs font-bold text-[#6370a4]">No files selected</span>}
         {files.map((file, index) => (
           <button key={`${file.name}-${index}`} type="button" onClick={() => onChange(files.filter((_, itemIndex) => itemIndex !== index))} className="max-w-full truncate rounded-full bg-white px-3 py-1 text-xs font-bold text-[#6370a4] hover:text-red-600">
-            {file.name} x
+            {file.name} · {Math.max(1, Math.round(file.size / 1024))} KB x
           </button>
         ))}
       </div>
     </div>
   );
+}
+
+function ImagePreview({ file }: { file: File }) {
+  const [src, setSrc] = useState("");
+
+  useEffect(() => {
+    const nextSrc = URL.createObjectURL(file);
+    setSrc(nextSrc);
+    return () => URL.revokeObjectURL(nextSrc);
+  }, [file]);
+
+  if (!src) return null;
+  return <img src={src} alt={file.name} className="h-20 w-full rounded-xl border border-[#eee8fb] object-cover" />;
 }

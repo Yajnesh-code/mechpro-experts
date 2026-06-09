@@ -43,8 +43,8 @@ export function CustomerLeadSearch() {
     <section className="rounded-[24px] border border-[#e3daf7] bg-white p-5 shadow-[0_18px_50px_rgba(111,43,255,0.08)]">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-black text-[#0f144a]">Track Service Request</h1>
-          <p className="mt-1 text-sm font-semibold text-[#6370a4]">Search by Request ID or vehicle number with registered mobile verification.</p>
+          <h1 className="text-2xl font-black text-[#0f144a]">Track Another Service Request</h1>
+          <p className="mt-1 text-sm font-semibold text-[#6370a4]">Your linked requests appear on the dashboard automatically. Use this only for an older/manual request with mobile verification.</p>
         </div>
         <Link href="/dashboard/customer/track/new" className="rounded-xl bg-mechpro-gradient px-4 py-2 text-sm font-black text-white shadow-[0_14px_28px_rgba(111,43,255,0.25)]">
           Create Guest Request

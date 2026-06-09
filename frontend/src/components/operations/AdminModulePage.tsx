@@ -1,6 +1,7 @@
 ﻿"use client";
 
 import { useEffect, useState } from "react";
+import { CheckCircle2, ExternalLink, FileText, ShieldAlert, XCircle } from "lucide-react";
 import { adminApi, formatMoney, formatShortDate } from "@/lib/operations";
 import { useToast } from "@/context/ToastContext";
 
@@ -94,7 +95,11 @@ function DocumentsView({ documents, onReview }: { documents: any[]; onReview: (i
           <button key={value} onClick={() => setFilter(value)} className={`rounded-xl px-4 py-2 text-xs font-black transition ${filter === value ? "bg-mechpro-gradient text-white shadow-lg shadow-violet-200" : "border border-[#ded4f6] bg-white text-violet-700 hover:bg-violet-50"}`}>{label}</button>
         ))}
       </div>
-      <div className="overflow-x-auto">
+      <div className="grid gap-3 md:hidden">
+        {filteredDocuments.map((document) => <DocumentReviewCard key={document.id} document={document} onReview={onReview} />)}
+        {filteredDocuments.length === 0 && <p className="py-8 text-center text-sm font-bold text-[#6370a4]">No documents in this filter.</p>}
+      </div>
+      <div className="hidden overflow-x-auto md:block">
       <table className="min-w-full text-left">
         <thead>
           <tr className="bg-[#f7f3ff] text-xs font-black uppercase tracking-[0.08em] text-[#7e88b5]">
@@ -136,6 +141,70 @@ function DocumentsView({ documents, onReview }: { documents: any[]; onReview: (i
   );
 }
 
+function adminDocumentKind(document: any) {
+  const url = String(document.url || document.path || "").toLowerCase();
+  if (/\.(png|jpg|jpeg|webp|gif)$/.test(url)) return "image";
+  if (/\.pdf$/.test(url)) return "pdf";
+  if (/\.(mp4|mov|webm)$/.test(url)) return "video";
+  return "file";
+}
+
+function adminReviewBadgeClass(status?: string) {
+  const normalized = String(status || "PENDING_REVIEW").toUpperCase();
+  if (normalized === "APPROVED") return "border-emerald-200 bg-emerald-50 text-emerald-700";
+  if (normalized === "REJECTED") return "border-red-200 bg-red-50 text-red-700";
+  if (normalized === "MISSING_REQUESTED") return "border-amber-200 bg-amber-50 text-amber-700";
+  return "border-violet-200 bg-violet-50 text-violet-700";
+}
+
+function DocumentReviewCard({ document, onReview }: { document: any; onReview: (id: string, status: string, notes?: string) => void }) {
+  const kind = adminDocumentKind(document);
+  const status = String(document.reviewStatus || "PENDING_REVIEW").replace(/_/g, " ");
+  const url = document.url || document.path || "#";
+  return (
+    <article className="overflow-hidden rounded-[22px] border border-[#eee8fb] bg-[#faf8ff] shadow-[0_14px_34px_rgba(111,43,255,0.08)]">
+      <div className="bg-white">
+        {kind === "image" && <img src={url} alt={document.name} className="h-40 w-full object-cover" />}
+        {kind === "video" && <video src={url} controls className="h-40 w-full bg-black object-contain" />}
+        {kind === "pdf" && (
+          <div className="flex h-32 items-center justify-center bg-white">
+            <FileText className="h-10 w-10 text-violet-500" />
+          </div>
+        )}
+        {kind === "file" && <div className="flex h-28 items-center justify-center bg-white text-sm font-black text-[#6370a4]">Preview unavailable</div>}
+      </div>
+      <div className="space-y-3 p-4">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="truncate font-black text-[#19204f]">{document.name}</p>
+            <p className="mt-1 text-xs font-bold text-[#6370a4]">{String(document.type || "DOCUMENT").replace(/_/g, " ")} · Version {document.version || 1}</p>
+          </div>
+          <span className={`shrink-0 rounded-full border px-2 py-1 text-[10px] font-black uppercase tracking-[0.08em] ${adminReviewBadgeClass(document.reviewStatus)}`}>{status}</span>
+        </div>
+        <div className="grid grid-cols-2 gap-2 text-xs">
+          <div className="rounded-xl bg-white px-3 py-2">
+            <p className="font-black uppercase tracking-[0.12em] text-[#8a94bd]">Case</p>
+            <p className="mt-1 truncate font-black text-violet-700">{document.lead?.leadCode || "-"}</p>
+          </div>
+          <div className="rounded-xl bg-white px-3 py-2">
+            <p className="font-black uppercase tracking-[0.12em] text-[#8a94bd]">Customer</p>
+            <p className="mt-1 truncate font-black text-[#19204f]">{document.lead?.customerName || "-"}</p>
+          </div>
+        </div>
+        {document.reviewNotes && <p className="rounded-xl bg-white px-3 py-2 text-xs font-bold text-[#8a5000]">Note: {document.reviewNotes}</p>}
+        <a href={url} target="_blank" rel="noreferrer" className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-[#ded4f6] bg-white px-3 py-2 text-xs font-black text-violet-700">
+          <ExternalLink className="h-3.5 w-3.5" /> Open / Preview Full File
+        </a>
+        <div className="grid grid-cols-3 gap-2">
+          <button onClick={() => onReview(document.id, "APPROVED")} className="rounded-xl border border-emerald-100 bg-emerald-50 px-2 py-2 text-[11px] font-black text-emerald-700"><CheckCircle2 className="mx-auto mb-1 h-4 w-4" />Approve</button>
+          <button onClick={() => onReview(document.id, "REJECTED", "Document rejected by admin review.")} className="rounded-xl border border-red-100 bg-red-50 px-2 py-2 text-[11px] font-black text-red-700"><XCircle className="mx-auto mb-1 h-4 w-4" />Reject</button>
+          <button onClick={() => onReview(document.id, "MISSING_REQUESTED", "Please upload the required document again.")} className="rounded-xl border border-amber-100 bg-amber-50 px-2 py-2 text-[11px] font-black text-amber-700"><ShieldAlert className="mx-auto mb-1 h-4 w-4" />Missing</button>
+        </div>
+      </div>
+    </article>
+  );
+}
+
 function ReportsView({ report }: { report: any }) {
   const { toast } = useToast();
   async function exportReport(format: "pdf" | "excel") {
@@ -155,7 +224,57 @@ function BillingView({ billing }: { billing: any }) {
 }
 
 function SettingsView({ settings }: { settings: any }) {
-  return <div className="mt-5 grid gap-4 md:grid-cols-2">{Object.entries(settings || {}).map(([key, value]) => <div key={key} className="rounded-2xl border border-[#eee8fb] bg-[#faf8ff] p-4"><p className="text-xs font-black uppercase text-[#7e88b5]">{key}</p><p className="mt-1 whitespace-pre-wrap font-black text-[#0f144a]">{typeof value === "object" ? JSON.stringify(value, null, 2) : String(value)}</p></div>)}</div>;
+  const cards = [
+    {
+      title: "Document Rules",
+      value: "RC mandatory for all requests. Accident cases require Driving License and damage photos.",
+      detail: "Admin can approve, reject, or request missing documents.",
+    },
+    {
+      title: "Storage",
+      value: "Local upload storage is active for demo.",
+      detail: "Production recommendation: move documents/photos/videos to Cloudinary or AWS S3.",
+    },
+    {
+      title: "Payment Mode",
+      value: "Manual payment tracking enabled.",
+      detail: "Admin and Service Partner can mark payment received. Razorpay can be added later.",
+    },
+    {
+      title: "Role Security",
+      value: "JWT role-based access is active.",
+      detail: "Users can access only their assigned role dashboard and APIs.",
+    },
+    {
+      title: "Lead Code",
+      value: "Auto-generated using ME + sequence + vendor code.",
+      detail: "Example: ME0001BR01 for Broker BR01.",
+    },
+    {
+      title: "Current Backend Settings",
+      value: settings ? "Backend settings endpoint connected." : "No custom settings returned.",
+      detail: settings ? Object.entries(settings).map(([key, value]) => `${key}: ${typeof value === "object" ? JSON.stringify(value) : String(value)}`).join("\n") : "Use this page for future business rules and storage configuration.",
+    },
+  ];
+
+  return (
+    <div className="mt-5 space-y-5">
+      <div className="rounded-[22px] border border-violet-100 bg-[linear-gradient(135deg,#fbf8ff,#fff)] p-4">
+        <p className="text-xs font-black uppercase tracking-[0.16em] text-violet-600">Operational Configuration</p>
+        <h2 className="mt-2 text-xl font-black text-[#0f144a]">MechPro demo-ready business rules</h2>
+        <p className="mt-2 text-sm font-semibold leading-6 text-[#6370a4]">These settings explain the current workflow clearly for client review. Technical storage can be upgraded before production.</p>
+      </div>
+      <div className="grid gap-4 md:grid-cols-2">
+        {cards.map((card) => (
+          <div key={card.title} className="rounded-2xl border border-[#eee8fb] bg-[#faf8ff] p-4">
+            <p className="text-xs font-black uppercase tracking-[0.12em] text-[#7e88b5]">{card.title}</p>
+            <p className="mt-2 font-black text-[#0f144a]">{card.value}</p>
+            <p className="mt-2 whitespace-pre-wrap text-sm font-semibold leading-6 text-[#6370a4]">{card.detail}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 function ActivityView({ logs }: { logs: any[] }) {

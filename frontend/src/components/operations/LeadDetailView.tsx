@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { ArrowLeft, Camera, CheckCircle2, ExternalLink, FileText, IndianRupee, RefreshCcw, Upload, Video } from "lucide-react";
@@ -24,6 +24,7 @@ export function LeadDetailView({ id, role }: { id: string; role: "admin" | "sale
   const [uploadType, setUploadType] = useState("SERVICE_DOCUMENT|Service Document");
   const [uploading, setUploading] = useState(false);
   const [reuploadingId, setReuploadingId] = useState<string | null>(null);
+  const [lastUpload, setLastUpload] = useState<{ name: string; size: string; preview?: string } | null>(null);
   const listPath = role === "service" ? "/dashboard/service/jobs" : role === "customer" ? "/dashboard/customer/track" : `/dashboard/${role}/leads`;
   const serviceStatusOptions = ALL_STATUSES.filter((item) => !["Quote Shared", "Bill Generated", "Payment Done"].includes(item));
   const uploadOptions = [
@@ -40,6 +41,12 @@ export function LeadDetailView({ id, role }: { id: string; role: "admin" | "sale
     { label: "Invoice Document", type: "INVOICE_DOCUMENT" },
     { label: "Service Document", type: "SERVICE_DOCUMENT" },
   ];
+
+  useEffect(() => {
+    return () => {
+      if (lastUpload?.preview) URL.revokeObjectURL(lastUpload.preview);
+    };
+  }, [lastUpload?.preview]);
 
   async function updateStatus() {
     if (!lead) return;
@@ -117,7 +124,13 @@ export function LeadDetailView({ id, role }: { id: string; role: "admin" | "sale
     try {
       const preparedFile = await compressImageFile(file);
       if (!preparedFile) return;
+      if (lastUpload?.preview) URL.revokeObjectURL(lastUpload.preview);
       await operationsApi.uploadDocument(lead.id, preparedFile, uploadType.split("|")[0] || "SERVICE_DOCUMENT");
+      setLastUpload({
+        name: preparedFile.name,
+        size: `${Math.max(1, Math.round(preparedFile.size / 1024))} KB`,
+        preview: preparedFile.type.startsWith("image/") ? URL.createObjectURL(preparedFile) : undefined,
+      });
       toast("success", "Document uploaded successfully.");
       refetch();
     } catch (err) {
@@ -194,6 +207,15 @@ export function LeadDetailView({ id, role }: { id: string; role: "admin" | "sale
           </label>
           <span className="text-sm font-semibold text-[#6370a4]">Supports images, videos and PDFs.</span>
         </div>
+        {lastUpload && (
+          <div className="mt-4 flex items-center gap-3 rounded-2xl border border-emerald-100 bg-emerald-50 p-3">
+            {lastUpload.preview ? <img src={lastUpload.preview} alt={lastUpload.name} className="h-14 w-14 rounded-xl object-cover" /> : <FileText className="h-8 w-8 shrink-0 text-emerald-700" />}
+            <div className="min-w-0">
+              <p className="font-black text-emerald-800"><CheckCircle2 className="mr-1 inline h-4 w-4" /> Uploaded successfully</p>
+              <p className="truncate text-xs font-bold text-emerald-700">{lastUpload.name} · {lastUpload.size}</p>
+            </div>
+          </div>
+        )}
         {role === "service" && (
           <div className="mt-3 grid gap-2 text-xs font-bold text-[#6370a4] md:grid-cols-3">
             <p className="rounded-xl bg-[#faf8ff] px-3 py-2">Vehicle received: capture front/rear/side and odometer photos.</p>
