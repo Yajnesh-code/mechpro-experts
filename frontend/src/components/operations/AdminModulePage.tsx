@@ -79,7 +79,12 @@ function UserTable({ users, onDeactivate }: { users: any[]; onDeactivate: (id: s
 
 function DocumentsView({ documents, onReview }: { documents: any[]; onReview: (id: string, status: string, notes?: string) => void }) {
   const [filter, setFilter] = useState("ALL");
-  const filteredDocuments = filter === "ALL" ? documents : documents.filter((document) => String(document.reviewStatus || "PENDING_REVIEW").toUpperCase() === filter);
+  const [section, setSection] = useState("ALL");
+  const filteredDocuments = documents.filter((document) => {
+    const statusMatches = filter === "ALL" || String(document.reviewStatus || "PENDING_REVIEW").toUpperCase() === filter;
+    const sectionMatches = section === "ALL" || adminDocumentSection(document) === section;
+    return statusMatches && sectionMatches;
+  });
   const filters = [
     ["ALL", "All"],
     ["PENDING_REVIEW", "Pending"],
@@ -87,9 +92,20 @@ function DocumentsView({ documents, onReview }: { documents: any[]; onReview: (i
     ["REJECTED", "Rejected"],
     ["MISSING_REQUESTED", "Missing"],
   ];
+  const sections = [
+    ["ALL", "All Documents"],
+    ["LEAD", "Lead Docs"],
+    ["SERVICE", "Service Uploads"],
+    ["BILLING", "Quote / Invoice"],
+  ];
   if (!documents.length) return <p className="mt-5 font-bold text-[#6370a4]">No documents uploaded yet.</p>;
   return (
     <div className="mt-5">
+      <div className="mb-3 flex flex-wrap gap-2">
+        {sections.map(([value, label]) => (
+          <button key={value} onClick={() => setSection(value)} className={`rounded-xl px-4 py-2 text-xs font-black transition ${section === value ? "bg-[#0f144a] text-white shadow-lg shadow-violet-100" : "border border-[#ded4f6] bg-white text-[#42508a] hover:bg-violet-50"}`}>{label}</button>
+        ))}
+      </div>
       <div className="mb-4 flex flex-wrap gap-2">
         {filters.map(([value, label]) => (
           <button key={value} onClick={() => setFilter(value)} className={`rounded-xl px-4 py-2 text-xs font-black transition ${filter === value ? "bg-mechpro-gradient text-white shadow-lg shadow-violet-200" : "border border-[#ded4f6] bg-white text-violet-700 hover:bg-violet-50"}`}>{label}</button>
@@ -116,13 +132,14 @@ function DocumentsView({ documents, onReview }: { documents: any[]; onReview: (i
               <td className="px-4 py-3">
                 <a href={document.url} target="_blank" rel="noreferrer" className="font-black text-violet-700 hover:underline">{document.name}</a>
                 <p className="text-xs font-semibold text-[#6370a4]">{document.type} · Version {document.version || 1} · {document.isCurrent === false ? "Previous version" : "Current"} · {document.size ? `${Math.round(Number(document.size) / 1024)} KB` : "file"}</p>
+                <p className="mt-1 text-xs font-bold text-[#8a94bd]">{adminDocumentSectionLabel(document)} · {document.mimeType || "file"}</p>
                 {document.reviewNotes && <p className="mt-1 text-xs font-bold text-[#8a5000]">Note: {document.reviewNotes}</p>}
               </td>
               <td className="px-4 py-3">
                 <p className="font-black text-[#19204f]">{document.lead?.leadCode || "-"}</p>
                 <p className="text-xs font-semibold text-[#6370a4]">{document.lead?.customerName || ""}</p>
               </td>
-              <td className="px-4 py-3 font-bold text-[#42508a]">{document.uploadedBy?.contact_person || document.uploadedBy?.name || "MechPro User"}</td>
+              <td className="px-4 py-3 font-bold text-[#42508a]">{document.uploadedBy?.contact_person || document.uploadedBy?.name || "MechPro User"}<p className="text-xs font-bold text-[#8a94bd]">{String(document.uploadedBy?.role || "").replace(/_/g, " ")}</p></td>
               <td className="px-4 py-3"><span className="rounded-full bg-violet-50 px-2.5 py-1 text-xs font-black text-violet-700">{String(document.reviewStatus || "PENDING_REVIEW").replace(/_/g, " ")}</span></td>
               <td className="px-4 py-3">
                 <div className="flex flex-wrap gap-2">
@@ -139,6 +156,21 @@ function DocumentsView({ documents, onReview }: { documents: any[]; onReview: (i
       </div>
     </div>
   );
+}
+
+function adminDocumentSection(document: any) {
+  const type = String(document.type || "").toUpperCase();
+  const role = String(document.uploadedBy?.role || document.uploadedByRole || "").toUpperCase();
+  if (["QUOTE_DOCUMENT", "INVOICE_DOCUMENT"].includes(type)) return "BILLING";
+  if (role === "SERVICE_PARTNER" || type === "SERVICE_DOCUMENT") return "SERVICE";
+  return "LEAD";
+}
+
+function adminDocumentSectionLabel(document: any) {
+  const section = adminDocumentSection(document);
+  if (section === "BILLING") return "Quote / Invoice";
+  if (section === "SERVICE") return "Service Partner Upload";
+  return "Lead Document";
 }
 
 function adminDocumentKind(document: any) {
@@ -191,6 +223,9 @@ function DocumentReviewCard({ document, onReview }: { document: any; onReview: (
             <p className="mt-1 truncate font-black text-[#19204f]">{document.lead?.customerName || "-"}</p>
           </div>
         </div>
+        <p className="rounded-xl bg-white px-3 py-2 text-xs font-bold text-[#6370a4]">
+          {adminDocumentSectionLabel(document)} · Uploaded by {document.uploadedBy?.contact_person || document.uploadedBy?.name || "MechPro User"}{document.uploadedBy?.role ? ` (${String(document.uploadedBy.role).replace(/_/g, " ")})` : ""}
+        </p>
         {document.reviewNotes && <p className="rounded-xl bg-white px-3 py-2 text-xs font-bold text-[#8a5000]">Note: {document.reviewNotes}</p>}
         <a href={url} target="_blank" rel="noreferrer" className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-[#ded4f6] bg-white px-3 py-2 text-xs font-black text-violet-700">
           <ExternalLink className="h-3.5 w-3.5" /> Open / Preview Full File

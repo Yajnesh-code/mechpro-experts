@@ -66,6 +66,7 @@ export type UiDocument = {
   url: string;
   uploadedAt: string;
   uploadedBy: string;
+  uploadedByRole?: string;
   size?: string;
   reviewStatus?: string;
   reviewNotes?: string;
@@ -205,6 +206,7 @@ function mapDocument(document: Record<string, any>): UiDocument {
     url: documentUrl(document),
     uploadedAt: document.createdAt || document.uploadedAt || new Date().toISOString(),
     uploadedBy: document.uploadedBy?.contact_person || document.uploadedBy?.name || "MechPro User",
+    uploadedByRole: document.uploadedBy?.role || document.uploadedByRole || undefined,
     size: typeof document.size === "number" ? `${Math.round(document.size / 1024)} KB` : document.size,
     reviewStatus: document.reviewStatus || "PENDING_REVIEW",
     reviewNotes: document.reviewNotes || undefined,

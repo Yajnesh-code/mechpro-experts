@@ -1,9 +1,9 @@
 import type { DocumentType, Lead, LeadStatus, Prisma, UserRole } from "@prisma/client";
 import fs from "fs/promises";
 import { prisma } from "../config/prisma.js";
-import { env } from "../config/env.js";
 import { leadRepository } from "../repositories/lead.repository.js";
 import { userRepository } from "../repositories/user.repository.js";
+import { storageService } from "./storage.service.js";
 import { badRequest, forbidden, notFound } from "../utils/errors.js";
 
 const workflow: LeadStatus[] = [
@@ -152,6 +152,7 @@ export const leadService = {
       if (!files.length) throw badRequest("At least RC document is required.");
       if (files.length !== documentTypes.length) throw badRequest("Document type mapping is invalid.");
       validateRequiredDocuments(input, documentTypes);
+      const storedFiles = await Promise.all(files.map((file, index) => storageService.storeLeadFile(file, documentTypes[index] || "OTHER")));
 
       const leadCode = await generateLeadCode(salesPartnerId);
       const lead = await prisma.$transaction(async (tx) => {
@@ -162,7 +163,7 @@ export const leadService = {
             uploadedById: salesPartnerId,
             type: documentTypes[index] || "OTHER",
             name: file.originalname,
-            path: `/${env.uploadDir}/${file.filename}`,
+            path: storedFiles[index]?.path || "",
             mimeType: file.mimetype,
             size: file.size,
           })),

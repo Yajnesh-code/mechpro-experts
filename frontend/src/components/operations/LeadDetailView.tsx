@@ -225,7 +225,7 @@ export function LeadDetailView({ id, role }: { id: string; role: "admin" | "sale
         )}
         <div className="mt-5 space-y-5">
           {lead.documents.length === 0 && <p className="text-sm font-bold text-[#6370a4]">No documents uploaded yet.</p>}
-          {(["Required Documents", "Service Documents", "Other Documents"] as const).map((group) => {
+          {(["Lead Documents", "Service Partner Uploads", "Quote & Invoice Documents", "Other Documents"] as const).map((group) => {
             const docs = groupDocuments(lead.documents)[group];
             if (!docs.length) return null;
             return (
@@ -358,17 +358,20 @@ function InfoCard({ title, rows }: { title: string; rows: string[][] }) {
 }
 
 function groupDocuments(documents: UiDocument[]) {
-  return documents.reduce<Record<"Required Documents" | "Service Documents" | "Other Documents", UiDocument[]>>((groups, document) => {
+  return documents.reduce<Record<"Lead Documents" | "Service Partner Uploads" | "Quote & Invoice Documents" | "Other Documents", UiDocument[]>>((groups, document) => {
     const type = document.type;
-    if (["RC_DOCUMENT", "VEHICLE_PHOTO", "INSURANCE_DOCUMENT"].includes(type) || type === "OTHER") {
-      groups["Required Documents"].push(document);
-    } else if (["QUOTE_DOCUMENT", "INVOICE_DOCUMENT", "SERVICE_DOCUMENT"].includes(type)) {
-      groups["Service Documents"].push(document);
+    const uploaderRole = String(document.uploadedByRole || "").toUpperCase();
+    if (["QUOTE_DOCUMENT", "INVOICE_DOCUMENT"].includes(type)) {
+      groups["Quote & Invoice Documents"].push(document);
+    } else if (uploaderRole === "SERVICE_PARTNER" || type === "SERVICE_DOCUMENT") {
+      groups["Service Partner Uploads"].push(document);
+    } else if (["RC_DOCUMENT", "VEHICLE_PHOTO", "INSURANCE_DOCUMENT"].includes(type) || type === "OTHER") {
+      groups["Lead Documents"].push(document);
     } else {
       groups["Other Documents"].push(document);
     }
     return groups;
-  }, { "Required Documents": [], "Service Documents": [], "Other Documents": [] });
+  }, { "Lead Documents": [], "Service Partner Uploads": [], "Quote & Invoice Documents": [], "Other Documents": [] });
 }
 
 function documentKind(document: UiDocument) {
@@ -424,7 +427,7 @@ function DocumentCard({
         <div className="flex items-start justify-between gap-3">
           <div>
             <p className="font-black text-[#19204f]">{document.name}</p>
-            <p className="text-xs font-semibold text-[#6370a4]">{document.type.replace(/_/g, " ")} · Version {document.version || 1} · {document.size || "file"} · Uploaded by {document.uploadedBy}</p>
+            <p className="text-xs font-semibold text-[#6370a4]">{document.type.replace(/_/g, " ")} · Version {document.version || 1} · {document.size || "file"} · Uploaded by {document.uploadedBy}{document.uploadedByRole ? ` (${document.uploadedByRole.replace(/_/g, " ")})` : ""}</p>
           </div>
           <div className="flex flex-col items-end gap-2">
             <span className={`rounded-full border px-2 py-1 text-[10px] font-black uppercase tracking-[0.08em] ${reviewBadgeClass(document.reviewStatus)}`}>{label}</span>
