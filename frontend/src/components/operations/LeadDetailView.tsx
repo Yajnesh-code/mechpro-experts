@@ -11,6 +11,81 @@ import { compressImageFile } from "@/lib/fileCompression";
 import { ALL_STATUSES, adminApi, formatMoney, formatShortDate, operationsApi, type UiDocument, type UiLeadStatus } from "@/lib/operations";
 import { PriorityPill, StatusPill } from "./LeadTables";
 
+type LeadDetailRole = "admin" | "sales" | "service" | "customer";
+type DocumentGroupKey = "initial" | "service" | "billing" | "other";
+type UploadOption = { label: string; type: string; hint: string };
+
+const uploadOptionsByRole: Record<LeadDetailRole, UploadOption[]> = {
+  admin: [],
+  sales: [
+    { label: "RC Document", type: "RC_DOCUMENT", hint: "Vehicle registration certificate or RC smart card." },
+    { label: "Driving License", type: "OTHER", hint: "Required for accident cases when collected by the partner." },
+    { label: "Insurance Policy", type: "INSURANCE_DOCUMENT", hint: "Policy copy or insurance claim document." },
+    { label: "Initial / Damage Photos", type: "VEHICLE_PHOTO", hint: "Customer-provided initial vehicle or damage photos." },
+    { label: "Other Customer Document", type: "OTHER", hint: "Any additional customer-side document." },
+  ],
+  customer: [
+    { label: "RC Document", type: "RC_DOCUMENT", hint: "Upload your vehicle RC if requested." },
+    { label: "Driving License", type: "OTHER", hint: "Required for accident cases when requested." },
+    { label: "Insurance Policy", type: "INSURANCE_DOCUMENT", hint: "Insurance policy or claim related document." },
+    { label: "Damage Photos", type: "VEHICLE_PHOTO", hint: "Vehicle damage photos requested by MechPro." },
+    { label: "Other Requested Document", type: "OTHER", hint: "Any missing document requested by Admin." },
+  ],
+  service: [
+    { label: "Vehicle Received Photos", type: "VEHICLE_PHOTO", hint: "Front, rear, side, odometer and received-condition photos." },
+    { label: "Damage / Inspection Photos", type: "SERVICE_DOCUMENT", hint: "Detailed damage and inspection proof." },
+    { label: "Inspection Video", type: "SERVICE_DOCUMENT", hint: "Walkaround or inspection video." },
+    { label: "Work Progress Media", type: "SERVICE_DOCUMENT", hint: "Repair progress photos/videos." },
+    { label: "After Repair Photos", type: "SERVICE_DOCUMENT", hint: "Completion proof after repair." },
+    { label: "Final Delivery Video", type: "SERVICE_DOCUMENT", hint: "Delivery proof or final vehicle video." },
+    { label: "Quote Document", type: "QUOTE_DOCUMENT", hint: "Formal quote document, if available." },
+    { label: "Invoice Document", type: "INVOICE_DOCUMENT", hint: "Invoice PDF/image after billing." },
+    { label: "Service Report", type: "SERVICE_DOCUMENT", hint: "Inspection or final service report." },
+  ],
+};
+
+function uploadValue(option: UploadOption) {
+  return `${option.type}|${option.label}`;
+}
+
+function getUploadOptions(role: LeadDetailRole) {
+  return uploadOptionsByRole[role];
+}
+
+function getUploadIntro(role: LeadDetailRole) {
+  if (role === "sales") return "Upload only customer/vehicle documents collected before assignment. Service photos, quote and invoice are handled by the Service Partner.";
+  if (role === "customer") return "Upload only requested customer documents. Service photos, quote and invoice will be uploaded by MechPro/Service Partner.";
+  if (role === "service") return "Upload only job/service proof such as inspection photos, videos, work progress, quote, invoice and final report.";
+  return "Admin reviews all uploaded files here. Uploads are handled by Sales, Customer, or Service Partner based on workflow.";
+}
+
+const groupLabelByRole: Record<LeadDetailRole, Record<DocumentGroupKey, string>> = {
+  admin: {
+    initial: "Initial Documents",
+    service: "Service Partner Uploads",
+    billing: "Quote & Invoice Documents",
+    other: "Other Documents",
+  },
+  sales: {
+    initial: "Submitted Customer Documents",
+    service: "Service Partner Updates",
+    billing: "Quote & Invoice Documents",
+    other: "Other Documents",
+  },
+  service: {
+    initial: "Customer / Case Documents",
+    service: "My Service Uploads",
+    billing: "Quote & Invoice Documents",
+    other: "Other Documents",
+  },
+  customer: {
+    initial: "Submitted Documents",
+    service: "Service Updates",
+    billing: "Quote & Invoice",
+    other: "Other Documents",
+  },
+};
+
 export function LeadDetailView({ id, role }: { id: string; role: "admin" | "sales" | "service" | "customer" }) {
   const { lead, loading, error, refetch } = useLead(id);
   const { toast } = useToast();
@@ -21,32 +96,33 @@ export function LeadDetailView({ id, role }: { id: string; role: "admin" | "sale
   const [paymentMode, setPaymentMode] = useState("UPI");
   const [paymentReference, setPaymentReference] = useState("");
   const [paymentNotes, setPaymentNotes] = useState("");
-  const [uploadType, setUploadType] = useState("SERVICE_DOCUMENT|Service Document");
+  const initialUploadOptions = getUploadOptions(role);
+  const [uploadType, setUploadType] = useState(initialUploadOptions[0] ? uploadValue(initialUploadOptions[0]) : "");
   const [uploading, setUploading] = useState(false);
   const [reuploadingId, setReuploadingId] = useState<string | null>(null);
   const [lastUpload, setLastUpload] = useState<{ name: string; size: string; preview?: string } | null>(null);
   const listPath = role === "service" ? "/dashboard/service/jobs" : role === "customer" ? "/dashboard/customer/track" : `/dashboard/${role}/leads`;
   const serviceStatusOptions = ALL_STATUSES.filter((item) => !["Quote Shared", "Bill Generated", "Payment Done"].includes(item));
-  const uploadOptions = [
-    { label: "RC Document", type: "RC_DOCUMENT" },
-    { label: "Driving License / Other", type: "OTHER" },
-    { label: "Vehicle Received Photos", type: "VEHICLE_PHOTO" },
-    { label: "Damage / Inspection Photos", type: "VEHICLE_PHOTO" },
-    { label: "Inspection Video", type: "SERVICE_DOCUMENT" },
-    { label: "Work Progress Media", type: "SERVICE_DOCUMENT" },
-    { label: "After Repair Photos", type: "SERVICE_DOCUMENT" },
-    { label: "Final Delivery Video", type: "SERVICE_DOCUMENT" },
-    { label: "Insurance Document", type: "INSURANCE_DOCUMENT" },
-    { label: "Quote Document", type: "QUOTE_DOCUMENT" },
-    { label: "Invoice Document", type: "INVOICE_DOCUMENT" },
-    { label: "Service Document", type: "SERVICE_DOCUMENT" },
-  ];
+  const uploadOptions = getUploadOptions(role);
+  const selectedUploadOption = uploadOptions.find((option) => uploadValue(option) === uploadType);
+  const canUploadDocuments = uploadOptions.length > 0;
+  const fileAccept = role === "service" ? ".pdf,.jpg,.jpeg,.png,.mp4,.mov,.webm" : ".pdf,.jpg,.jpeg,.png";
 
   useEffect(() => {
     return () => {
       if (lastUpload?.preview) URL.revokeObjectURL(lastUpload.preview);
     };
   }, [lastUpload?.preview]);
+
+  useEffect(() => {
+    if (!uploadOptions.length) {
+      setUploadType("");
+      return;
+    }
+    if (!uploadOptions.some((option) => uploadValue(option) === uploadType)) {
+      setUploadType(uploadValue(uploadOptions[0]));
+    }
+  }, [role, uploadOptions, uploadType]);
 
   async function updateStatus() {
     if (!lead) return;
@@ -120,12 +196,17 @@ export function LeadDetailView({ id, role }: { id: string; role: "admin" | "sale
 
   async function uploadFile(file?: File) {
     if (!lead || !file) return;
+    const selectedType = uploadType.split("|")[0];
+    if (!selectedType) {
+      toast("error", "Select a document type before upload.");
+      return;
+    }
     setUploading(true);
     try {
       const preparedFile = await compressImageFile(file);
       if (!preparedFile) return;
       if (lastUpload?.preview) URL.revokeObjectURL(lastUpload.preview);
-      await operationsApi.uploadDocument(lead.id, preparedFile, uploadType.split("|")[0] || "SERVICE_DOCUMENT");
+      await operationsApi.uploadDocument(lead.id, preparedFile, selectedType);
       setLastUpload({
         name: preparedFile.name,
         size: `${Math.max(1, Math.round(preparedFile.size / 1024))} KB`,
@@ -189,24 +270,38 @@ export function LeadDetailView({ id, role }: { id: string; role: "admin" | "sale
       </div>
       <Panel>
         <h2 className="text-lg font-black text-[#0f144a]">Documents</h2>
-        <div className="mt-4 flex flex-wrap items-center gap-3">
-          <select className="rounded-xl border border-[#ded4f6] bg-white px-3 py-2 text-sm font-black text-[#19204f]" value={uploadType} onChange={(event) => setUploadType(event.target.value)}>
-            {uploadOptions.map((option, index) => <option key={`${option.label}-${index}`} value={`${option.type}|${option.label}`}>{option.label}</option>)}
-          </select>
-          <label className="cursor-pointer rounded-xl border border-[#ded4f6] px-4 py-2 text-sm font-black text-violet-700 transition hover:bg-violet-50">
-            <Upload className="mr-1 inline h-4 w-4" /> {uploading ? "Uploading..." : "Upload File"}
-            <input type="file" className="hidden" accept=".pdf,.jpg,.jpeg,.png,.mp4,.mov" onChange={(event) => uploadFile(event.target.files?.[0])} />
-          </label>
-          <label className="cursor-pointer rounded-xl border border-[#ded4f6] px-4 py-2 text-sm font-black text-violet-700 transition hover:bg-violet-50">
-            <Camera className="mr-1 inline h-4 w-4" /> Take Photo
-            <input type="file" className="hidden" accept="image/*" capture="environment" onChange={(event) => uploadFile(event.target.files?.[0])} />
-          </label>
-          <label className="cursor-pointer rounded-xl border border-[#ded4f6] px-4 py-2 text-sm font-black text-violet-700 transition hover:bg-violet-50">
-            <Video className="mr-1 inline h-4 w-4" /> Record Video
-            <input type="file" className="hidden" accept="video/*" capture="environment" onChange={(event) => uploadFile(event.target.files?.[0])} />
-          </label>
-          <span className="text-sm font-semibold text-[#6370a4]">Supports images, videos and PDFs.</span>
-        </div>
+        <p className="mt-1 text-sm font-semibold leading-6 text-[#6370a4]">{getUploadIntro(role)}</p>
+        {canUploadDocuments ? (
+          <div className="mt-4 rounded-2xl border border-[#eee8fb] bg-[#faf8ff] p-4">
+            <div className="flex flex-wrap items-center gap-3">
+              <select className="min-h-11 rounded-xl border border-[#ded4f6] bg-white px-3 py-2 text-sm font-black text-[#19204f]" value={uploadType} onChange={(event) => setUploadType(event.target.value)}>
+                {uploadOptions.map((option) => <option key={uploadValue(option)} value={uploadValue(option)}>{option.label}</option>)}
+              </select>
+              <label className="cursor-pointer rounded-xl border border-[#ded4f6] bg-white px-4 py-2 text-sm font-black text-violet-700 transition hover:bg-violet-50">
+                <Upload className="mr-1 inline h-4 w-4" /> {uploading ? "Uploading..." : "Upload File"}
+                <input type="file" className="hidden" accept={fileAccept} onChange={(event) => uploadFile(event.target.files?.[0])} />
+              </label>
+              <label className="cursor-pointer rounded-xl border border-[#ded4f6] bg-white px-4 py-2 text-sm font-black text-violet-700 transition hover:bg-violet-50">
+                <Camera className="mr-1 inline h-4 w-4" /> Take Photo
+                <input type="file" className="hidden" accept="image/*" capture="environment" onChange={(event) => uploadFile(event.target.files?.[0])} />
+              </label>
+              {role === "service" && (
+                <label className="cursor-pointer rounded-xl border border-[#ded4f6] bg-white px-4 py-2 text-sm font-black text-violet-700 transition hover:bg-violet-50">
+                  <Video className="mr-1 inline h-4 w-4" /> Record Video
+                  <input type="file" className="hidden" accept="video/*" capture="environment" onChange={(event) => uploadFile(event.target.files?.[0])} />
+                </label>
+              )}
+            </div>
+            <p className="mt-3 text-xs font-bold leading-5 text-[#6370a4]">
+              Selected: <span className="text-[#19204f]">{selectedUploadOption?.label || "Document"}</span>
+              {selectedUploadOption?.hint ? ` - ${selectedUploadOption.hint}` : ""}
+            </p>
+          </div>
+        ) : (
+          <div className="mt-4 rounded-2xl border border-violet-100 bg-[#faf8ff] p-4 text-sm font-bold text-[#6370a4]">
+            Admin can review, approve, reject, or request missing documents. Uploads are collected from Sales Partner, Customer, or assigned Service Partner.
+          </div>
+        )}
         {lastUpload && (
           <div className="mt-4 flex items-center gap-3 rounded-2xl border border-emerald-100 bg-emerald-50 p-3">
             {lastUpload.preview ? <img src={lastUpload.preview} alt={lastUpload.name} className="h-14 w-14 rounded-xl object-cover" /> : <FileText className="h-8 w-8 shrink-0 text-emerald-700" />}
@@ -225,12 +320,12 @@ export function LeadDetailView({ id, role }: { id: string; role: "admin" | "sale
         )}
         <div className="mt-5 space-y-5">
           {lead.documents.length === 0 && <p className="text-sm font-bold text-[#6370a4]">No documents uploaded yet.</p>}
-          {(["Lead Documents", "Service Partner Uploads", "Quote & Invoice Documents", "Other Documents"] as const).map((group) => {
+          {(["initial", "service", "billing", "other"] as const).map((group) => {
             const docs = groupDocuments(lead.documents)[group];
             if (!docs.length) return null;
             return (
               <div key={group}>
-                <h3 className="text-sm font-black uppercase tracking-[0.12em] text-[#7e88b5]">{group}</h3>
+                <h3 className="text-sm font-black uppercase tracking-[0.12em] text-[#7e88b5]">{groupLabelByRole[role][group]}</h3>
                 <div className="mt-3 grid gap-4 xl:grid-cols-2">
                   {docs.map((document) => <DocumentCard key={document.id} document={document} canReview={role === "admin"} onReview={reviewDocument} onReupload={reuploadDocument} reuploading={reuploadingId === document.id} />)}
                 </div>
@@ -358,20 +453,20 @@ function InfoCard({ title, rows }: { title: string; rows: string[][] }) {
 }
 
 function groupDocuments(documents: UiDocument[]) {
-  return documents.reduce<Record<"Lead Documents" | "Service Partner Uploads" | "Quote & Invoice Documents" | "Other Documents", UiDocument[]>>((groups, document) => {
+  return documents.reduce<Record<DocumentGroupKey, UiDocument[]>>((groups, document) => {
     const type = document.type;
     const uploaderRole = String(document.uploadedByRole || "").toUpperCase();
     if (["QUOTE_DOCUMENT", "INVOICE_DOCUMENT"].includes(type)) {
-      groups["Quote & Invoice Documents"].push(document);
+      groups.billing.push(document);
     } else if (uploaderRole === "SERVICE_PARTNER" || type === "SERVICE_DOCUMENT") {
-      groups["Service Partner Uploads"].push(document);
+      groups.service.push(document);
     } else if (["RC_DOCUMENT", "VEHICLE_PHOTO", "INSURANCE_DOCUMENT"].includes(type) || type === "OTHER") {
-      groups["Lead Documents"].push(document);
+      groups.initial.push(document);
     } else {
-      groups["Other Documents"].push(document);
+      groups.other.push(document);
     }
     return groups;
-  }, { "Lead Documents": [], "Service Partner Uploads": [], "Quote & Invoice Documents": [], "Other Documents": [] });
+  }, { initial: [], service: [], billing: [], other: [] });
 }
 
 function documentKind(document: UiDocument) {
