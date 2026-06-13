@@ -11,8 +11,9 @@ export const uploadService = {
     replacesDocumentId?: string;
   }) {
     const storedFile = await storageService.storeLeadFile(params.file, params.type);
+    let replacedPath: string | undefined;
 
-    return prisma.$transaction(async (tx) => {
+    const createdDocument = await prisma.$transaction(async (tx) => {
       const replaced = params.replacesDocumentId
         ? await tx.document.findFirst({
             where: { id: params.replacesDocumentId, leadId: params.leadId },
@@ -20,6 +21,7 @@ export const uploadService = {
         : null;
 
       if (replaced) {
+        replacedPath = replaced.path;
         await tx.document.update({
           where: { id: replaced.id },
           data: { isCurrent: false },
@@ -51,5 +53,11 @@ export const uploadService = {
       });
       return document;
     });
+
+    if (replacedPath) {
+      await storageService.deleteFile(replacedPath).catch(() => undefined);
+    }
+
+    return createdDocument;
   },
 };

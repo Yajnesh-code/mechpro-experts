@@ -14,6 +14,7 @@ const __dirname = path.dirname(__filename);
 
 export const app = express();
 
+app.set("trust proxy", 1);
 app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
 app.use(cors({ origin: env.corsOrigin.split(",").map((item) => item.trim()), credentials: true }));
 app.use(express.json({ limit: "2mb" }));

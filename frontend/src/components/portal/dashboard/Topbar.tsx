@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Bell, Search } from "lucide-react";
+import { Bell, CheckCheck, Search } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/context/ToastContext";
 import { notificationsApi, formatShortDate } from "@/lib/operations";
@@ -26,15 +26,16 @@ export function Topbar({ roleLabel }: TopbarProps) {
   const [open, setOpen] = useState(false);
   const [notifications, setNotifications] = useState<any[]>([]);
   const [refreshing, setRefreshing] = useState(false);
+  const [filter, setFilter] = useState<"all" | "unread" | "read">("all");
 
   useEffect(() => {
     refreshNotifications(false);
-  }, []);
+  }, [filter]);
 
   async function refreshNotifications(showToast = true) {
     setRefreshing(true);
     try {
-      const nextNotifications = await notificationsApi.list();
+      const nextNotifications = await notificationsApi.list(filter);
       setNotifications(nextNotifications);
       if (showToast) toast("success", "Notifications refreshed.");
     } catch (err) {
@@ -42,6 +43,30 @@ export function Topbar({ roleLabel }: TopbarProps) {
     } finally {
       setRefreshing(false);
     }
+  }
+
+  async function markAllRead() {
+    try {
+      await notificationsApi.markAllRead();
+      setNotifications((current) => current.map((item) => ({ ...item, readAt: item.readAt || new Date().toISOString() })));
+      toast("success", "All notifications marked as read.");
+    } catch (err) {
+      toast("error", err instanceof Error ? err.message : "Unable to update notifications.");
+    }
+  }
+
+  function notificationActionPath(item: any) {
+    const text = `${item.title || ""} ${item.message || ""}`.toLowerCase();
+    if (text.includes("document")) return "/dashboard/admin/documents";
+    if (text.includes("quote") || text.includes("invoice") || text.includes("payment")) {
+      if (roleLabel.toLowerCase().includes("service")) return "/dashboard/service/jobs";
+      if (roleLabel.toLowerCase().includes("customer")) return "/dashboard/customer";
+      return "/dashboard/admin/billing";
+    }
+    if (text.includes("assigned") || text.includes("job")) return "/dashboard/service/jobs";
+    if (roleLabel.toLowerCase().includes("sales")) return "/dashboard/sales/leads";
+    if (roleLabel.toLowerCase().includes("customer")) return "/dashboard/customer/track";
+    return "/dashboard/admin/leads";
   }
 
   function handleLogout() {
@@ -70,9 +95,25 @@ export function Topbar({ roleLabel }: TopbarProps) {
             <div className="absolute right-0 top-12 z-50 w-[min(20rem,calc(100vw-2rem))] rounded-2xl border border-[#e5def8] bg-white p-3 shadow-[0_24px_60px_rgba(15,20,74,0.18)]">
               <div className="flex items-center justify-between">
                 <p className="font-black text-[#0f144a]">Notifications</p>
-                <button className="text-xs font-black text-violet-700 disabled:opacity-50" disabled={refreshing} onClick={() => refreshNotifications()}>
-                  {refreshing ? "Refreshing..." : "Refresh"}
-                </button>
+                <div className="flex items-center gap-2">
+                  <button className="text-xs font-black text-violet-700 disabled:opacity-50" disabled={refreshing} onClick={() => refreshNotifications()}>
+                    {refreshing ? "Refreshing..." : "Refresh"}
+                  </button>
+                  <button title="Mark all read" className="rounded-lg border border-[#ded5f6] p-1.5 text-violet-700" onClick={markAllRead}>
+                    <CheckCheck className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              </div>
+              <div className="mt-3 flex gap-2 overflow-x-auto">
+                {(["all", "unread", "read"] as const).map((item) => (
+                  <button
+                    key={item}
+                    onClick={() => setFilter(item)}
+                    className={`rounded-full px-3 py-1.5 text-[11px] font-black capitalize ${filter === item ? "bg-mechpro-gradient text-white" : "border border-[#ded5f6] bg-white text-[#58639d]"}`}
+                  >
+                    {item}
+                  </button>
+                ))}
               </div>
               <div className="mt-3 max-h-80 space-y-2 overflow-y-auto">
                 {notifications.length === 0 && <p className="rounded-xl bg-[#faf8ff] p-3 text-sm font-bold text-[#6370a4]">No notifications yet.</p>}
@@ -83,6 +124,8 @@ export function Topbar({ roleLabel }: TopbarProps) {
                     onClick={async () => {
                       if (!item.readAt) await notificationsApi.markRead(item.id).catch(() => undefined);
                       setNotifications((current) => current.map((entry) => entry.id === item.id ? { ...entry, readAt: entry.readAt || new Date().toISOString() } : entry));
+                      setOpen(false);
+                      router.push(notificationActionPath(item));
                     }}
                   >
                     <p className="text-sm font-black text-[#19204f]">{item.title}</p>

@@ -1,9 +1,25 @@
 import type { Response } from "express";
+import type { DocumentType, UserRole } from "@prisma/client";
 import { leadService } from "../services/lead.service.js";
 import { uploadService } from "../services/upload.service.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import type { AuthenticatedRequest } from "../types/auth.js";
 import { assignLeadSchema, createInvoiceSchema, createLeadSchema, createQuotationSchema, customerTrackSchema, paymentUpdateSchema, quoteDecisionSchema, updateLeadStatusSchema } from "../validators/lead.validator.js";
+import { badRequest } from "../utils/errors.js";
+
+const allowedUploadTypesByRole: Record<UserRole, DocumentType[]> = {
+  ADMIN: [],
+  SALES_PARTNER: ["RC_DOCUMENT", "OTHER", "INSURANCE_DOCUMENT", "VEHICLE_PHOTO"],
+  CUSTOMER: ["RC_DOCUMENT", "OTHER", "INSURANCE_DOCUMENT", "VEHICLE_PHOTO"],
+  SERVICE_PARTNER: ["VEHICLE_PHOTO", "SERVICE_DOCUMENT", "QUOTE_DOCUMENT", "INVOICE_DOCUMENT"],
+};
+
+function validateUploadType(role: UserRole, type: DocumentType) {
+  const allowed = allowedUploadTypesByRole[role] || [];
+  if (!allowed.includes(type)) {
+    throw badRequest(`Document type ${type} is not allowed for ${role.replace(/_/g, " ").toLowerCase()} uploads.`);
+  }
+}
 
 export const leadController = {
   list: asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
@@ -75,11 +91,13 @@ export const leadController = {
   uploadDocument: asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
     if (!req.file) return res.status(400).json({ message: "File is required" });
     await leadService.getForUser(req.params.id!, req.user!.id, req.user!.role);
+    const type = (req.body.type ?? "OTHER") as DocumentType;
+    validateUploadType(req.user!.role, type);
     const document = await uploadService.attachLeadDocument({
       leadId: req.params.id!,
       uploadedById: req.user!.id,
       file: req.file,
-      type: (req.body.type ?? "OTHER") as never,
+      type,
       replacesDocumentId: req.body.replacesDocumentId ? String(req.body.replacesDocumentId) : undefined,
     });
     res.status(201).json(document);

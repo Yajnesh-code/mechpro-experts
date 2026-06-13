@@ -327,7 +327,7 @@ export function LeadDetailView({ id, role }: { id: string; role: "admin" | "sale
               <div key={group}>
                 <h3 className="text-sm font-black uppercase tracking-[0.12em] text-[#7e88b5]">{groupLabelByRole[role][group]}</h3>
                 <div className="mt-3 grid gap-4 xl:grid-cols-2">
-                  {docs.map((document) => <DocumentCard key={document.id} document={document} canReview={role === "admin"} onReview={reviewDocument} onReupload={reuploadDocument} reuploading={reuploadingId === document.id} />)}
+                  {docs.map((document) => <DocumentCard key={document.id} document={document} canReview={role === "admin"} canReupload={role !== "admin"} onReview={reviewDocument} onReupload={reuploadDocument} reuploading={reuploadingId === document.id} />)}
                 </div>
               </div>
             );
@@ -488,12 +488,14 @@ function reviewBadgeClass(status?: string) {
 function DocumentCard({
   document,
   canReview,
+  canReupload,
   onReview,
   onReupload,
   reuploading,
 }: {
   document: UiDocument;
   canReview: boolean;
+  canReupload: boolean;
   onReview: (id: string, status: string, notes?: string) => void;
   onReupload: (document: UiDocument, file?: File) => void;
   reuploading: boolean;
@@ -532,7 +534,7 @@ function DocumentCard({
         {document.reviewNotes && <p className="mt-3 rounded-xl bg-white px-3 py-2 text-xs font-bold text-[#6370a4]">Review note: {document.reviewNotes}</p>}
         <div className="mt-4 flex flex-wrap gap-2">
           <a href={document.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 rounded-xl border border-[#ded4f6] bg-white px-3 py-2 text-xs font-black text-violet-700"><ExternalLink className="h-3.5 w-3.5" /> Open Full File</a>
-          {needsReupload && (
+          {needsReupload && canReupload && (
             <label className="cursor-pointer rounded-xl border border-amber-100 bg-amber-50 px-3 py-2 text-xs font-black text-amber-700 transition hover:bg-amber-100">
               {reuploading ? "Uploading..." : "Upload Replacement"}
               <input type="file" className="hidden" accept=".pdf,.jpg,.jpeg,.png,.mp4,.mov" onChange={(event) => onReupload(document, event.target.files?.[0])} />

@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import { useEffect, useState } from "react";
-import { CheckCircle2, ExternalLink, FileText, ShieldAlert, XCircle } from "lucide-react";
+import { CheckCircle2, ExternalLink, FileText, Plus, ShieldAlert, XCircle } from "lucide-react";
 import { adminApi, formatMoney, formatShortDate } from "@/lib/operations";
 import { useToast } from "@/context/ToastContext";
 
@@ -43,6 +43,21 @@ export function AdminModulePage({ kind }: { kind: AdminPageKind }) {
     }
   }
 
+  async function saveUser(payload: Record<string, unknown>, id?: string) {
+    try {
+      if (id) {
+        await adminApi.updateUser(id, payload);
+        toast("success", "User updated.");
+      } else {
+        await adminApi.createUser(payload);
+        toast("success", "User created.");
+      }
+      load();
+    } catch (err) {
+      toast("error", err instanceof Error ? err.message : "Unable to save user");
+    }
+  }
+
   async function reviewDocument(id: string, reviewStatus: string, reviewNotes?: string) {
     try {
       await adminApi.reviewDocument(id, { reviewStatus, reviewNotes });
@@ -63,7 +78,7 @@ export function AdminModulePage({ kind }: { kind: AdminPageKind }) {
       </div>
       {loading && <p className="mt-6 font-bold text-[#6370a4]">Loading...</p>}
       {error && <p className="mt-6 font-bold text-red-600">{error}</p>}
-      {!loading && !error && (kind === "users" || kind === "partners") && <UserTable users={data || []} onDeactivate={deactivateUser} />}
+      {!loading && !error && (kind === "users" || kind === "partners") && <UserManagement users={data || []} mode={kind} onDeactivate={deactivateUser} onSave={saveUser} />}
       {!loading && !error && kind === "documents" && <DocumentsView documents={data || []} onReview={reviewDocument} />}
       {!loading && !error && kind === "reports" && <ReportsView report={data} />}
       {!loading && !error && kind === "billing" && <BillingView billing={data} />}
@@ -73,8 +88,101 @@ export function AdminModulePage({ kind }: { kind: AdminPageKind }) {
   );
 }
 
-function UserTable({ users, onDeactivate }: { users: any[]; onDeactivate: (id: string) => void }) {
-  return <div className="mt-5 overflow-x-auto"><table className="min-w-full text-left"><thead><tr className="bg-[#f7f3ff] text-xs font-black uppercase tracking-[0.08em] text-[#7e88b5]"><th className="px-4 py-3">Name</th><th className="px-4 py-3">Role</th><th className="px-4 py-3">Company</th><th className="px-4 py-3">City</th><th className="px-4 py-3">Status</th><th className="px-4 py-3">Action</th></tr></thead><tbody>{users.map((user) => <tr key={user.id} className="border-t border-[#efebfb]"><td className="px-4 py-3"><p className="font-black text-[#19204f]">{user.contact_person}</p><p className="text-xs font-semibold text-[#6370a4]">{user.email}</p></td><td className="px-4 py-3 font-bold text-[#42508a]">{user.role}</td><td className="px-4 py-3 font-bold text-[#42508a]">{user.company_name || "-"}</td><td className="px-4 py-3 font-bold text-[#42508a]">{user.city || "-"}</td><td className="px-4 py-3"><span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-black text-emerald-700">{user.status}</span></td><td className="px-4 py-3"><button onClick={() => onDeactivate(user.id)} className="rounded-xl border border-red-100 bg-red-50 px-3 py-1.5 text-xs font-black text-red-700">Deactivate</button></td></tr>)}</tbody></table></div>;
+function UserManagement({ users, mode, onDeactivate, onSave }: { users: any[]; mode: "users" | "partners"; onDeactivate: (id: string) => void; onSave: (payload: Record<string, unknown>, id?: string) => void }) {
+  const [editing, setEditing] = useState<any | null>(null);
+  const [open, setOpen] = useState(false);
+  const filteredUsers = mode === "partners" ? users.filter((user) => ["SALES_PARTNER", "SERVICE_PARTNER"].includes(user.role)) : users;
+  return (
+    <div className="mt-5 space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#eee8fb] bg-[#faf8ff] p-4">
+        <div>
+          <p className="text-sm font-black text-[#0f144a]">{mode === "partners" ? "Partner directory" : "User directory"}</p>
+          <p className="text-xs font-semibold text-[#6370a4]">{filteredUsers.length} records synced with backend role security.</p>
+        </div>
+        <button onClick={() => { setEditing(null); setOpen(true); }} className="inline-flex items-center gap-2 rounded-xl bg-mechpro-gradient px-4 py-2 text-sm font-black text-white"><Plus className="h-4 w-4" /> Add {mode === "partners" ? "Partner" : "User"}</button>
+      </div>
+      {filteredUsers.length === 0 ? <EmptyState title="No users found" text="Create the first user or partner to start managing access." /> : <UserTable users={filteredUsers} onDeactivate={onDeactivate} onEdit={(user) => { setEditing(user); setOpen(true); }} />}
+      {open && <UserEditor mode={mode} user={editing} onClose={() => setOpen(false)} onSave={(payload, id) => { onSave(payload, id); setOpen(false); }} />}
+    </div>
+  );
+}
+
+function UserTable({ users, onDeactivate, onEdit }: { users: any[]; onDeactivate: (id: string) => void; onEdit: (user: any) => void }) {
+  return <div className="overflow-x-auto rounded-2xl border border-[#eee8fb]"><table className="min-w-full text-left"><thead><tr className="bg-[#f7f3ff] text-xs font-black uppercase tracking-[0.08em] text-[#7e88b5]"><th className="px-4 py-3">Name</th><th className="px-4 py-3">Role</th><th className="px-4 py-3">Company</th><th className="px-4 py-3">City</th><th className="px-4 py-3">Status</th><th className="px-4 py-3">Action</th></tr></thead><tbody>{users.map((user) => <tr key={user.id} className="border-t border-[#efebfb]"><td className="px-4 py-3"><p className="font-black text-[#19204f]">{user.contact_person || user.name}</p><p className="text-xs font-semibold text-[#6370a4]">{user.email}</p><p className="text-xs font-semibold text-[#8a94bd]">{user.phone || user.mobile || "-"}</p></td><td className="px-4 py-3 font-bold text-[#42508a]">{String(user.role || "").replace(/_/g, " ")}</td><td className="px-4 py-3 font-bold text-[#42508a]">{user.company_name || user.companyName || "-"}</td><td className="px-4 py-3 font-bold text-[#42508a]">{user.city || "-"}</td><td className="px-4 py-3"><span className={`rounded-full px-2.5 py-1 text-xs font-black ${user.status === "ACTIVE" ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-600"}`}>{user.status}</span></td><td className="px-4 py-3"><div className="flex flex-wrap gap-2"><button onClick={() => onEdit(user)} className="rounded-xl border border-[#ded4f6] bg-white px-3 py-1.5 text-xs font-black text-violet-700">Edit</button><button onClick={() => onDeactivate(user.id)} className="rounded-xl border border-red-100 bg-red-50 px-3 py-1.5 text-xs font-black text-red-700">Deactivate</button></div></td></tr>)}</tbody></table></div>;
+}
+
+function UserEditor({ user, mode, onClose, onSave }: { user: any | null; mode: "users" | "partners"; onClose: () => void; onSave: (payload: Record<string, unknown>, id?: string) => void }) {
+  const partnerDefaultRole = user?.role || "SERVICE_PARTNER";
+  const [form, setForm] = useState({
+    name: user?.contact_person || user?.name || "",
+    email: user?.email || "",
+    mobile: user?.phone || user?.mobile || "",
+    role: mode === "partners" ? partnerDefaultRole : user?.role || "CUSTOMER",
+    status: user?.status || "ACTIVE",
+    companyName: user?.company_name || user?.companyName || "",
+    city: user?.city || "",
+    address: user?.address || "",
+    salesPartnerType: user?.salesPartnerType || "BR",
+    servicePartnerType: user?.servicePartnerType || "WORKSHOP",
+    gstOrLicense: user?.gstOrLicense || "",
+    password: "MechPro@123",
+  });
+
+  function setField(key: string, value: string) {
+    setForm((current) => ({ ...current, [key]: value }));
+  }
+
+  function submit() {
+    const payload: Record<string, unknown> = { ...form };
+    if (user) delete payload.password;
+    if (form.role !== "SALES_PARTNER") delete payload.salesPartnerType;
+    if (form.role !== "SERVICE_PARTNER") delete payload.servicePartnerType;
+    onSave(payload, user?.id);
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#11153d]/45 p-4 backdrop-blur">
+      <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-[28px] bg-white p-6 shadow-[0_30px_80px_rgba(15,20,74,0.25)]">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.16em] text-violet-600">{user ? "Edit access" : "Create access"}</p>
+            <h2 className="mt-1 text-xl font-black text-[#0f144a]">{user ? "Update user / partner" : `Add ${mode === "partners" ? "partner" : "user"}`}</h2>
+          </div>
+          <button onClick={onClose} className="rounded-xl border border-[#ded4f6] px-3 py-2 text-sm font-black text-violet-700">Close</button>
+        </div>
+        <div className="mt-5 grid gap-4 md:grid-cols-2">
+          <AdminInput label="Name" value={form.name} onChange={(value) => setField("name", value)} />
+          <AdminInput label="Email" value={form.email} disabled={Boolean(user)} onChange={(value) => setField("email", value)} />
+          <AdminInput label="Mobile" value={form.mobile} onChange={(value) => setField("mobile", value)} />
+          <AdminSelect label="Role" value={form.role} options={mode === "partners" ? ["SALES_PARTNER", "SERVICE_PARTNER"] : ["ADMIN", "SALES_PARTNER", "SERVICE_PARTNER", "CUSTOMER"]} onChange={(value) => setField("role", value)} />
+          <AdminInput label="Company / Workshop" value={form.companyName} onChange={(value) => setField("companyName", value)} />
+          <AdminInput label="City" value={form.city} onChange={(value) => setField("city", value)} />
+          <AdminInput label="Address" value={form.address} onChange={(value) => setField("address", value)} />
+          <AdminSelect label="Status" value={form.status} options={["ACTIVE", "PENDING", "INACTIVE", "SUSPENDED"]} onChange={(value) => setField("status", value)} />
+          {form.role === "SALES_PARTNER" && <AdminSelect label="Sales Partner Type" value={form.salesPartnerType} options={["BR", "CR", "FT", "AG", "IN", "IS"]} onChange={(value) => setField("salesPartnerType", value)} />}
+          {form.role === "SERVICE_PARTNER" && <AdminSelect label="Service Partner Type" value={form.servicePartnerType} options={["WORKSHOP", "PART_VENDOR", "TOWING_SERVICE", "ALPHA_GO"]} onChange={(value) => setField("servicePartnerType", value)} />}
+          <AdminInput label="GST / License" value={form.gstOrLicense} onChange={(value) => setField("gstOrLicense", value)} />
+          {!user && <AdminInput label="Initial Password" value={form.password} onChange={(value) => setField("password", value)} />}
+        </div>
+        <div className="mt-6 flex justify-end gap-3">
+          <button onClick={onClose} className="rounded-xl border border-[#ded4f6] px-4 py-2 text-sm font-black text-violet-700">Cancel</button>
+          <button onClick={submit} className="rounded-xl bg-mechpro-gradient px-4 py-2 text-sm font-black text-white">Save</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AdminInput({ label, value, disabled, onChange }: { label: string; value: string; disabled?: boolean; onChange: (value: string) => void }) {
+  return <label className="block"><span className="text-sm font-black text-[#0f144a]">{label}</span><input disabled={disabled} value={value} onChange={(event) => onChange(event.target.value)} className="mt-2 h-12 w-full rounded-2xl border border-[#ded4f6] px-4 text-sm font-bold text-[#19204f] outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100 disabled:bg-slate-50 disabled:text-slate-400" /></label>;
+}
+
+function AdminSelect({ label, value, options, onChange }: { label: string; value: string; options: string[]; onChange: (value: string) => void }) {
+  return <label className="block"><span className="text-sm font-black text-[#0f144a]">{label}</span><select value={value} onChange={(event) => onChange(event.target.value)} className="mt-2 h-12 w-full rounded-2xl border border-[#ded4f6] bg-white px-4 text-sm font-bold text-[#19204f] outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100">{options.map((option) => <option key={option} value={option}>{option.replace(/_/g, " ")}</option>)}</select></label>;
+}
+
+function EmptyState({ title, text }: { title: string; text: string }) {
+  return <div className="rounded-2xl border border-dashed border-[#d8cdf4] bg-[#faf8ff] p-8 text-center"><p className="font-black text-[#0f144a]">{title}</p><p className="mt-2 text-sm font-semibold text-[#6370a4]">{text}</p></div>;
 }
 
 function DocumentsView({ documents, onReview }: { documents: any[]; onReview: (id: string, status: string, notes?: string) => void }) {
@@ -251,14 +359,17 @@ function ReportsView({ report }: { report: any }) {
     }
   }
   const metrics = [["Total Leads", report.totalLeads], ["Today", report.dailyLeads || 0], ["This Month", report.monthlyLeads || 0], ["Conversion", `${report.conversionRate || 0}%`], ["Active Leads", report.activeLeads], ["Completed", report.completedLeads], ["Revenue", formatMoney(report.revenue || 0)]];
-  return <div className="mt-5 space-y-5"><div className="flex flex-wrap gap-2"><button onClick={() => exportReport("pdf")} className="rounded-xl border border-[#ded4f6] px-4 py-2 text-sm font-black text-violet-700">Export PDF</button><button onClick={() => exportReport("excel")} className="rounded-xl border border-[#ded4f6] px-4 py-2 text-sm font-black text-violet-700">Export Excel</button></div><div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">{metrics.map(([label, value]) => <div key={label} className="rounded-2xl border border-[#eee8fb] bg-[#faf8ff] p-4"><p className="text-xs font-black uppercase text-[#7e88b5]">{label}</p><p className="mt-2 text-2xl font-black text-[#0f144a]">{value}</p></div>)}</div><div className="rounded-2xl border border-[#eee8fb] p-4"><h2 className="font-black text-[#0f144a]">Partner Performance</h2><div className="mt-3 grid gap-3 md:grid-cols-2">{report.partnerPerformance?.map((item: any) => <div key={item.id} className="rounded-xl bg-[#faf8ff] p-3"><p className="font-black text-[#19204f]">{item.name}</p><p className="text-sm font-semibold text-[#6370a4]">Jobs: {item.jobs} · Completed: {item.completed}</p></div>)}</div></div></div>;
+  const statusRows = Object.entries(report.byStatus || {});
+  return <div className="mt-5 space-y-5"><div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#eee8fb] bg-[#faf8ff] p-4"><div><p className="font-black text-[#0f144a]">Operations reporting</p><p className="text-sm font-semibold text-[#6370a4]">Daily, monthly, conversion and partner performance summary.</p></div><div className="flex flex-wrap gap-2"><button onClick={() => exportReport("pdf")} className="rounded-xl border border-[#ded4f6] bg-white px-4 py-2 text-sm font-black text-violet-700">Export PDF</button><button onClick={() => exportReport("excel")} className="rounded-xl border border-[#ded4f6] bg-white px-4 py-2 text-sm font-black text-violet-700">Export Excel</button></div></div><div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">{metrics.map(([label, value]) => <div key={label} className="rounded-2xl border border-[#eee8fb] bg-[#faf8ff] p-4"><p className="text-xs font-black uppercase text-[#7e88b5]">{label}</p><p className="mt-2 text-2xl font-black text-[#0f144a]">{value}</p></div>)}</div><div className="grid gap-5 xl:grid-cols-2"><div className="rounded-2xl border border-[#eee8fb] p-4"><h2 className="font-black text-[#0f144a]">Status Distribution</h2><div className="mt-3 space-y-2">{statusRows.length === 0 && <p className="text-sm font-bold text-[#6370a4]">No status data yet.</p>}{statusRows.map(([status, count]) => <div key={status} className="flex items-center justify-between rounded-xl bg-[#faf8ff] px-3 py-2"><span className="text-sm font-black text-[#19204f]">{status.replace(/_/g, " ")}</span><span className="rounded-full bg-white px-3 py-1 text-xs font-black text-violet-700">{String(count)}</span></div>)}</div></div><div className="rounded-2xl border border-[#eee8fb] p-4"><h2 className="font-black text-[#0f144a]">Partner Performance</h2><div className="mt-3 grid gap-3">{report.partnerPerformance?.length ? report.partnerPerformance.map((item: any) => <div key={item.id} className="rounded-xl bg-[#faf8ff] p-3"><p className="font-black text-[#19204f]">{item.name}</p><p className="text-sm font-semibold text-[#6370a4]">Jobs: {item.jobs} · Completed: {item.completed}</p></div>) : <p className="text-sm font-bold text-[#6370a4]">No partner jobs yet.</p>}</div></div></div></div>;
 }
 
 function BillingView({ billing }: { billing: any }) {
-  return <div className="mt-5 space-y-5"><div className="grid gap-4 sm:grid-cols-3 xl:grid-cols-6">{[["Total", billing.total], ["Paid", billing.paid], ["Pending", billing.pending], ["GST", billing.gst], ["Paid Count", billing.paidCount], ["Pending Count", billing.pendingCount]].map(([label, value]) => <div key={label} className="rounded-2xl border border-[#eee8fb] bg-[#faf8ff] p-4"><p className="text-xs font-black uppercase text-[#7e88b5]">{label}</p><p className="mt-2 text-2xl font-black text-[#0f144a]">{typeof value === "number" && String(label).includes("Count") ? value : formatMoney(Number(value || 0))}</p></div>)}</div><div className="overflow-x-auto"><table className="min-w-full text-left"><tbody>{billing.invoices?.map((invoice: any) => <tr key={invoice.id} className="border-t border-[#efebfb]"><td className="px-4 py-3 font-black text-violet-700">{invoice.lead?.leadCode}</td><td className="px-4 py-3 font-bold text-[#19204f]">{formatMoney(Number(invoice.total))}</td><td className="px-4 py-3"><span className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-black text-blue-700">{invoice.status}</span></td><td className="px-4 py-3 text-sm font-semibold text-[#6370a4]">{formatShortDate(invoice.createdAt)}</td></tr>)}</tbody></table></div></div>;
+  return <div className="mt-5 space-y-5"><div className="grid gap-4 sm:grid-cols-3 xl:grid-cols-6">{[["Total", billing.total], ["Paid", billing.paid], ["Pending", billing.pending], ["GST", billing.gst], ["Paid Count", billing.paidCount], ["Pending Count", billing.pendingCount]].map(([label, value]) => <div key={label} className="rounded-2xl border border-[#eee8fb] bg-[#faf8ff] p-4"><p className="text-xs font-black uppercase text-[#7e88b5]">{label}</p><p className="mt-2 text-2xl font-black text-[#0f144a]">{typeof value === "number" && String(label).includes("Count") ? value : formatMoney(Number(value || 0))}</p></div>)}</div><div className="rounded-2xl border border-[#eee8fb] bg-white p-4"><div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="font-black text-[#0f144a]">Invoice Register</h2><p className="text-sm font-semibold text-[#6370a4]">Manual payment tracking with GST and pending collections.</p></div></div>{billing.invoices?.length ? <div className="mt-4 overflow-x-auto"><table className="min-w-full text-left"><thead><tr className="bg-[#f7f3ff] text-xs font-black uppercase tracking-[0.08em] text-[#7e88b5]"><th className="px-4 py-3">Case</th><th className="px-4 py-3">Customer</th><th className="px-4 py-3">Amount</th><th className="px-4 py-3">GST</th><th className="px-4 py-3">Status</th><th className="px-4 py-3">Date</th></tr></thead><tbody>{billing.invoices.map((invoice: any) => <tr key={invoice.id} className="border-t border-[#efebfb]"><td className="px-4 py-3 font-black text-violet-700">{invoice.lead?.leadCode}</td><td className="px-4 py-3 font-bold text-[#19204f]">{invoice.lead?.customerName || "-"}</td><td className="px-4 py-3 font-bold text-[#19204f]">{formatMoney(Number(invoice.total))}</td><td className="px-4 py-3 font-bold text-[#6370a4]">{formatMoney(Number(invoice.gst || 0))}</td><td className="px-4 py-3"><span className={`rounded-full px-2.5 py-1 text-xs font-black ${invoice.status === "PAID" ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>{invoice.status}</span></td><td className="px-4 py-3 text-sm font-semibold text-[#6370a4]">{formatShortDate(invoice.createdAt)}</td></tr>)}</tbody></table></div> : <EmptyState title="No invoices generated" text="Invoices will appear here after Service Partner creates billing for an approved quote." />}</div></div>;
 }
 
 function SettingsView({ settings }: { settings: any }) {
+  const storageProvider = String(settings?.storage?.provider || "local");
+  const storageReady = settings?.storage?.cloudinaryConfigured === true || storageProvider === "local";
   const cards = [
     {
       title: "Document Rules",
@@ -267,8 +378,8 @@ function SettingsView({ settings }: { settings: any }) {
     },
     {
       title: "Storage",
-      value: "Local upload storage is active for demo.",
-      detail: "Production recommendation: move documents/photos/videos to Cloudinary or AWS S3.",
+      value: `${storageProvider.toUpperCase()} upload storage is ${storageReady ? "configured" : "not fully configured"}.`,
+      detail: storageProvider === "cloudinary" ? "Documents/photos/videos are stored through Cloudinary. Replaced files are cleaned up when possible." : "Local upload storage is active. Production recommendation: move documents/photos/videos to Cloudinary or AWS S3.",
     },
     {
       title: "Payment Mode",

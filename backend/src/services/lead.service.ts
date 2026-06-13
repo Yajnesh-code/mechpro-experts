@@ -148,11 +148,12 @@ export const leadService = {
 
   async createWithDocuments(input: Record<string, unknown>, salesPartnerId: string, files: Express.Multer.File[], rawTypes: unknown[]) {
     const documentTypes = rawTypes.map((type) => String(type)) as DocumentType[];
+    let storedFiles: Array<{ path: string }> = [];
     try {
       if (!files.length) throw badRequest("At least RC document is required.");
       if (files.length !== documentTypes.length) throw badRequest("Document type mapping is invalid.");
       validateRequiredDocuments(input, documentTypes);
-      const storedFiles = await Promise.all(files.map((file, index) => storageService.storeLeadFile(file, documentTypes[index] || "OTHER")));
+      storedFiles = await Promise.all(files.map((file, index) => storageService.storeLeadFile(file, documentTypes[index] || "OTHER")));
 
       const leadCode = await generateLeadCode(salesPartnerId);
       const lead = await prisma.$transaction(async (tx) => {
@@ -179,6 +180,7 @@ export const leadService = {
       return leadRepository.findById(lead.id);
     } catch (error) {
       await cleanupFiles(files);
+      await Promise.all(storedFiles.map((file) => storageService.deleteFile(file.path).catch(() => undefined)));
       throw error;
     }
   },

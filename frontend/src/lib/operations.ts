@@ -361,6 +361,7 @@ export const operationsApi = {
 
 export const adminApi = {
   listUsers: () => request<any[]>("/admin/users"),
+  createUser: (data: Record<string, unknown>) => request("/admin/users", { method: "POST", body: JSON.stringify(data) }),
   updateUser: (id: string, data: Record<string, unknown>) => request(`/admin/users/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
   deleteUser: (id: string) => request(`/admin/users/${id}`, { method: "DELETE" }),
   listPartners: () => request<any[]>("/admin/partners"),

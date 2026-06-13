@@ -1,5 +1,5 @@
 ﻿import { Router } from "express";
-import type { Prisma } from "@prisma/client";
+import type { Prisma, UserRole, UserStatus } from "@prisma/client";
 import { prisma } from "../config/prisma.js";
 import { requireAuth } from "../middleware/auth.middleware.js";
 import { requireRole } from "../middleware/role.middleware.js";
@@ -8,6 +8,7 @@ import { serializeUser } from "../utils/serializers.js";
 import { hashPassword } from "../utils/password.js";
 import type { AuthenticatedRequest } from "../types/auth.js";
 import { storageService } from "../services/storage.service.js";
+import { badRequest } from "../utils/errors.js";
 
 export const adminRoutes = Router();
 
@@ -76,24 +77,58 @@ adminRoutes.get("/users", asyncHandler(async (_req, res) => {
   res.json(users.map(serializeUser));
 }));
 
+const adminAllowedRoles: UserRole[] = ["ADMIN", "SALES_PARTNER", "SERVICE_PARTNER", "CUSTOMER"];
+const adminAllowedStatuses: UserStatus[] = ["ACTIVE", "INACTIVE", "PENDING", "SUSPENDED"];
+
+function optionalText(value: unknown) {
+  const text = value === undefined || value === null ? "" : String(value).trim();
+  return text || undefined;
+}
+
 adminRoutes.post("/users", asyncHandler(async (req, res) => {
   const authReq = req as AuthenticatedRequest;
+  const name = optionalText(req.body.name);
+  const email = optionalText(req.body.email)?.toLowerCase();
+  const mobile = optionalText(req.body.mobile);
+  const role = optionalText(req.body.role) as UserRole | undefined;
+  const status = (optionalText(req.body.status) as UserStatus | undefined) || "ACTIVE";
+  const vendorCode = optionalText(req.body.vendorCode)?.toUpperCase();
+
+  if (!name) throw badRequest("Name is required.");
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw badRequest("A valid email is required.");
+  if (mobile && !/^[0-9+\-\s]{7,15}$/.test(mobile)) throw badRequest("A valid mobile number is required.");
+  if (!role || !adminAllowedRoles.includes(role)) throw badRequest("A valid user role is required.");
+  if (!adminAllowedStatuses.includes(status)) throw badRequest("A valid user status is required.");
+  if (role === "SALES_PARTNER" && !req.body.salesPartnerType) throw badRequest("Sales partner type is required.");
+  if (role === "SERVICE_PARTNER" && !req.body.servicePartnerType) throw badRequest("Service partner type is required.");
+
+  const duplicate = await prisma.user.findFirst({
+    where: {
+      OR: [
+        { email },
+        ...(mobile ? [{ mobile }] : []),
+        ...(vendorCode ? [{ vendorCode }] : []),
+      ],
+    },
+  });
+  if (duplicate) throw badRequest("A user already exists with this email, mobile number, or vendor code.");
+
   const passwordHash = await hashPassword(String(req.body.password || "MechPro@123"));
   const user = await prisma.user.create({
     data: {
-      name: String(req.body.name),
-      email: String(req.body.email).toLowerCase(),
-      mobile: req.body.mobile ? String(req.body.mobile) : undefined,
-      role: req.body.role,
-      status: req.body.status || "ACTIVE",
-      companyName: req.body.companyName,
-      city: req.body.city,
-      address: req.body.address,
-      salesPartnerType: req.body.salesPartnerType,
-      vendorCode: req.body.vendorCode,
-      servicePartnerType: req.body.servicePartnerType,
-      serviceCategories: req.body.serviceCategories || [],
-      gstOrLicense: req.body.gstOrLicense,
+      name,
+      email,
+      mobile,
+      role,
+      status,
+      companyName: optionalText(req.body.companyName),
+      city: optionalText(req.body.city),
+      address: optionalText(req.body.address),
+      salesPartnerType: role === "SALES_PARTNER" ? req.body.salesPartnerType : undefined,
+      vendorCode: role === "SALES_PARTNER" ? vendorCode : undefined,
+      servicePartnerType: role === "SERVICE_PARTNER" ? req.body.servicePartnerType : undefined,
+      serviceCategories: role === "SERVICE_PARTNER" ? (req.body.serviceCategories || []) : [],
+      gstOrLicense: optionalText(req.body.gstOrLicense),
       passwordHash,
     },
   });
@@ -267,4 +302,9 @@ adminRoutes.patch("/documents/:id/review", asyncHandler(async (req, res) => {
 
 adminRoutes.get("/settings", asyncHandler(async (_req, res) => {
   res.json({ appName: "MechPro Experts", gstPercent: 18, notificationsEnabled: true, storage: storageService.describe(), paymentProvider: "manual" });
+}));
+
+adminRoutes.get("/storage/health", asyncHandler(async (_req, res) => {
+  const health = await storageService.healthCheck();
+  res.status(health.ok ? 200 : 502).json(health);
 }));
